@@ -57,6 +57,8 @@ When no parameters are given, the current value is queried and returned.
 | SetPxCol     | 0x16 |   ` D ` |          |   50 Bytes | Send a column of pixels  |
 | FlushFB      | 0x17 |   ` D ` |          |            | Flush all columns        |
 | Version      | 0x20 |   `LDM` |  3 Bytes |            | Get firmware version     |
+| StartupAnim  | 0x21 |   `L  ` |          |    3 Bytes | Save startup animation   |
+| GetStartupAn | 0x21 |   `L  ` |  3 Bytes |            | Get startup animation    |
 
 #### Pattern (0x01)
 
@@ -105,3 +107,32 @@ Byte 2: 1 if pre-release version, 0 otherwise
 |        |   |           |   0 otherwise
 MMMMMMMM mmmmPPPP 0000000p
 ```
+
+#### StartupAnimation (0x21)
+
+Choose which animation the LED Matrix shows when it powers on.
+The setting is saved in flash and survives firmware updates.
+After saving, the chosen animation plays once right away.
+
+Parameters (the response of the query has the same format):
+
+```plain
+Byte 0: Mode
+        0x00 - Random animation (default)
+        0x01 - Always the same animation (see byte 1)
+        0x02 - Random animation, out of a set (see byte 2)
+        0x03 - No animation
+Byte 1: Animation, for mode 0x01
+Byte 2: Bitmask of animations, for mode 0x02. Bit 0 is animation 0x00.
+```
+
+Animations:
+
+- 0x00 - Percentage (fill up the screen)
+- 0x01 - ZigZag
+- 0x02 - Game of Life, Pattern 1
+- 0x03 - Game of Life, Beacon, Toad and Blinker
+- 0x04 - Game of Life, Glider
+- 0x05 - Breathing
+- 0x06 - Pong
+- 0x07 - Snake

@@ -31,6 +31,7 @@ num-traits = { version = "0.2", default-features = false }
 
 # LED Matrix
 is31fl3741 = { workspace = true, optional = true }
+rp2040-flash = { workspace = true, optional = true }
 
 # B1 Display
 st7306 = { workspace = true, optional = true }
@@ -43,7 +44,7 @@ ws2812-pio = { workspace = true, optional = true }
 
 [features]
 default = []
-ledmatrix = ["is31fl3741"]
+ledmatrix = ["is31fl3741", "rp2040-flash"]
 b1display = ["st7306", "embedded-graphics", "tinybmp"]
 c1minimal = ["smart-leds", "ws2812-pio"]
 qtpy = ["c1minimal"]
