@@ -80,8 +80,12 @@ def run_gui(devices):
 
     global device_checkboxes
     device_checkboxes = {}
+    versions = {}
+    startup_settings = {}
     for dev in devices:
         version = get_version(dev)
+        versions[dev.name] = version
+        startup_settings[dev.name] = get_startup_animation(dev)
         device_info = (
             f"{dev.name}\nSerial No: {dev.serial_number}\nFW Version:{version}"
         )
@@ -116,7 +120,7 @@ def run_gui(devices):
     # Startup Animation
     startup_frame = ttk.LabelFrame(tab1, text="Startup Animation", style="TLabelframe")
     startup_frame.pack(fill="x", padx=10, pady=5)
-    startup_widgets(startup_frame, devices)
+    startup_widgets(startup_frame, devices, startup_settings)
 
     # Animation Control
     animation_frame = ttk.LabelFrame(tab1, text="Animation", style="TLabelframe")
@@ -201,6 +205,13 @@ def run_gui(devices):
     ttk.Button(symbols_frame, text="Send '2 5 degC thunder'", command=lambda: send_symbols(devices), style="TButton").pack(side="left", padx=5, pady=5)
 
     # Firmware Update
+    installed_fw_frame = ttk.LabelFrame(tab_fw, text="Installed Firmware", style="TLabelframe")
+    installed_fw_frame.pack(fill="x", padx=10, pady=5)
+    for dev in devices:
+        startup_support = "supported" if startup_settings[dev.name] else "not supported"
+        text = f"{dev.name}: Version {versions[dev.name]}, startup animation setting {startup_support}"
+        ttk.Label(installed_fw_frame, text=text, style="TLabel").pack(anchor="w", padx=5, pady=2)
+
     bootloader_frame = ttk.LabelFrame(tab_fw, text="Bootloader", style="TLabelframe")
     bootloader_frame.pack(fill="x", padx=10, pady=5)
     ttk.Button(bootloader_frame, text="Enter Bootloader", command=lambda: perform_action(devices, "bootloader"), style="TButton").pack(side="left", padx=5, pady=5)
@@ -219,6 +230,10 @@ def run_gui(devices):
         fw_ver_combo.current(0)
         flash_btn = ttk.Button(bundled_fw_frame, text="Update", command=lambda: tk_flash_firmware(devices, releases, fw_ver_combo.get(), 'ledmatrix'), style="TButton")
         flash_btn.pack(side="left", padx=5, pady=5)
+        # The bundled firmware is the official release, downloaded when building the app
+        ttk.Label(bundled_fw_frame, text="Official firmware from Framework", style="TLabel").pack(side="left", padx=5, pady=5)
+        source_btn = ttk.Button(bundled_fw_frame, text="Release Notes", command=lambda: webbrowser.open(f"https://github.com/FrameworkComputer/inputmodule-rs/releases/tag/v{fw_ver_combo.get()}"), style="TButton")
+        source_btn.pack(side="left", padx=5, pady=5)
 
     # PWM Frequency Combo Box
     pwm_freq_frame = ttk.LabelFrame(tab3, text="PWM Frequency", style="TLabelframe")
@@ -245,11 +260,11 @@ def run_gui(devices):
 
     root.mainloop()
 
-def startup_widgets(frame, devices):
+def startup_widgets(frame, devices, startup_settings):
     """Controls to choose which animation is shown when the module powers on"""
     current = None
     for dev in devices:
-        current = get_startup_animation(dev)
+        current = startup_settings[dev.name]
         if current:
             break
 
@@ -329,10 +344,6 @@ def perform_action(devices, action):
         if action in action_map:
             threading.Thread(target=action_map[action], args=(devices,), daemon=True).start(),
 
-    if action == "bootloader":
-        disable_devices(devices)
-        restart_hint()
-
     action_map = {
         "bootloader": bootloader_jump,
         "sleep": lambda dev: send_command(dev, CommandVals.Sleep, [True]),
@@ -353,6 +364,11 @@ def perform_action(devices, action):
     for dev in selected_devices:
         if action in action_map:
             action_map[action](dev)
+
+    # Only after sending the command, because it unselects the devices
+    if action == "bootloader":
+        disable_devices(devices)
+        restart_hint()
 
 def set_brightness(devices, value):
     selected_devices = get_selected_devices(devices)
