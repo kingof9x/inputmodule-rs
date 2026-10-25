@@ -159,6 +159,16 @@ def run_gui(devices):
         "Toad": "gol_toad",
         "Beacon": "gol_beacon",
         "Glider": "gol_glider",
+        "R-pentomino": "gol_rpentomino",
+        "Acorn": "gol_acorn",
+        "Diehard": "gol_diehard",
+        "Light spaceship": "gol_lwss",
+        "Medium spaceship": "gol_mwss",
+        "Heavy spaceship": "gol_hwss",
+        "Spaceship fleet": "gol_fleet",
+        "Octagon": "gol_octagon",
+        "Tumbler": "gol_tumbler",
+        "Caterer": "gol_caterer",
         "Stop": "game_stop",
     }
     for (i, (text, action)) in enumerate(animation_buttons.items()):
@@ -358,6 +368,16 @@ def perform_action(devices, action):
         "gol_toad": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 3]),
         "gol_beacon": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 4]),
         "gol_glider": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 5]),
+        "gol_rpentomino": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 7]),
+        "gol_acorn": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 8]),
+        "gol_diehard": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 9]),
+        "gol_lwss": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 10]),
+        "gol_mwss": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 11]),
+        "gol_hwss": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 12]),
+        "gol_fleet": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 13]),
+        "gol_octagon": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 14]),
+        "gol_tumbler": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 15]),
+        "gol_caterer": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 16]),
         "game_stop": lambda dev: send_command(dev, CommandVals.GameControl, [GameControlVal.Quit]),
     }
     selected_devices = get_selected_devices(devices)
