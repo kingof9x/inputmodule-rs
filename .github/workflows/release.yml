@@ -1,0 +1,117 @@
+name: Release
+
+# Builds the LED Matrix firmware, the GUI and the command line tool, and
+# publishes them as a GitHub release every time main changes.
+# Can also be started by hand from the Actions tab ("Run workflow").
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+jobs:
+  firmware:
+    name: Build LED Matrix firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        run: rustup show
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev
+
+      - run: cargo install cargo-make
+
+      - run: cargo install flip-link
+
+      - run: cargo make --cwd ledmatrix uf2
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ledmatrix.uf2
+          path: target/thumbv6m-none-eabi/release/ledmatrix.uf2
+
+  cli-windows:
+    name: Build Windows command line tool
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        run: rustup show
+
+      - run: cargo install cargo-make
+
+      - name: Build Windows tool
+        run: cargo make --cwd inputmodule-control build-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inputmodule-control.exe
+          path: target/x86_64-pc-windows-msvc/release/inputmodule-control.exe
+
+  # Same steps as the "Build GUI" job in software.yml
+  gui:
+    name: Build GUI
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download releases to bundle
+        run: |
+          mkdir releases
+          mkdir releases\0.2.0
+          Invoke-WebRequest -Uri https://github.com/FrameworkComputer/inputmodule-rs/releases/download/v0.2.0/ledmatrix.uf2  -OutFile releases\0.2.0\ledmatrix.uf2
+
+      - name: Create Executable
+        uses: JohnAZoidberg/pyinstaller-action@dont-clean
+        with:
+          python_ver: '3.12'
+          spec: python/inputmodule/cli.py
+          requirements: 'python/requirements.txt'
+          upload_exe_with_name: 'ledmatrixgui.exe'
+          options: --onefile, --name "ledmatrixgui", --windowed, --add-data "releases;releases" --icon=res/framework_startmenuicon.ico --add-data 'res;res' -p python/inputmodule
+
+  release:
+    name: Publish release
+    needs: [firmware, cli-windows, gui]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - run: ls -R artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: LED Matrix tools, build ${{ github.run_number }}
+          make_latest: true
+          body: |
+            Built automatically from commit ${{ github.sha }}.
+
+            - `ledmatrixgui.exe`: the Windows GUI. Just download and run it.
+            - `ledmatrix.uf2`: LED Matrix firmware with the startup animation setting and the extra Game of Life patterns.
+            - `inputmodule-control.exe`: the Windows command line tool.
+
+            See the [README](https://github.com/${{ github.repository }}#readme) for what is different from Framework's official version.
+          files: |
+            artifacts/ledmatrixgui.exe
+            artifacts/ledmatrix.uf2
+            artifacts/inputmodule-control.exe
+          fail_on_unmatched_files: true
