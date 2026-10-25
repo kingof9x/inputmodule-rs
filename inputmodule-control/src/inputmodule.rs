@@ -11,7 +11,7 @@ use serialport::{SerialPort, SerialPortInfo, SerialPortType};
 use crate::b1display::{B1Pattern, Fps, PowerMode};
 use crate::c1minimal::Color;
 use crate::font::{convert_font, convert_symbol};
-use crate::ledmatrix::{Game, GameOfLifeStartParam, Pattern};
+use crate::ledmatrix::{Game, GameOfLifeStartParam, Pattern, StartupAnimation};
 
 const FWK_MAGIC: &[u8] = &[0x32, 0xAC];
 pub const FRAMEWORK_VID: u16 = 0x32AC;
@@ -50,6 +50,7 @@ enum Command {
     PwmFreq = 0x1E,
     DebugMode = 0x1F,
     Version = 0x20,
+    StartupAnimation = 0x21,
 }
 
 enum GameControlArg {
@@ -234,6 +235,13 @@ pub fn serial_commands(args: &crate::ClapCli) {
                 }
                 if let Some(debug_mode) = ledmatrix_args.debug_mode {
                     debug_mode_cmd(serialdev, debug_mode);
+                }
+
+                if let Some(animation) = ledmatrix_args.startup_animation {
+                    startup_animation_cmd(serialdev, animation);
+                }
+                if let Some(set) = &ledmatrix_args.startup_animation_set {
+                    startup_animation_set_cmd(serialdev, set);
                 }
 
                 if ledmatrix_args.stop_game {
@@ -474,6 +482,60 @@ fn debug_mode_cmd(serialdev: &str, arg: Option<bool>) {
         let debug_mode: bool = response[0] == 1;
         println!("Debug Mode enabled: {debug_mode}");
     }
+}
+
+fn startup_animation_cmd(serialdev: &str, arg: Option<StartupAnimation>) {
+    let mut port = serialport::new(serialdev, 115_200)
+        .timeout(SERIAL_TIMEOUT)
+        .open()
+        .expect("Failed to open port");
+
+    if let Some(animation) = arg {
+        // Arguments: mode, animation, set of animations
+        let args = match animation {
+            StartupAnimation::Random => [0x00, 0, 0xFF],
+            StartupAnimation::None => [0x03, 0, 0xFF],
+            animation => [0x01, animation.id().unwrap(), 0xFF],
+        };
+        simple_cmd_port(&mut port, Command::StartupAnimation, &args);
+    } else {
+        simple_cmd_port(&mut port, Command::StartupAnimation, &[]);
+
+        let mut response: Vec<u8> = vec![0; 32];
+        port.read_exact(response.as_mut_slice())
+            .expect("Found no data! Firmware might be too old.");
+
+        let name = |id: u8| {
+            StartupAnimation::ANIMATIONS
+                .get(id as usize)
+                .map(|a| format!("{a:?}"))
+                .unwrap_or_else(|| format!("Unknown ({id})"))
+        };
+        match response[0] {
+            0x00 => println!("Startup animation: Random"),
+            0x01 => println!("Startup animation: {}", name(response[1])),
+            0x02 => {
+                let set: Vec<String> = (0..8)
+                    .filter(|i| response[2] & (1 << i) != 0)
+                    .map(name)
+                    .collect();
+                println!("Startup animation: Random out of {}", set.join(", "));
+            }
+            0x03 => println!("Startup animation: None"),
+            mode => println!("Startup animation: Unknown mode ({mode})"),
+        }
+    }
+}
+
+fn startup_animation_set_cmd(serialdev: &str, set: &[StartupAnimation]) {
+    let mut mask: u8 = 0;
+    for animation in set {
+        let Some(id) = animation.id() else {
+            panic!("{animation:?} can't be part of the set");
+        };
+        mask |= 1 << id;
+    }
+    simple_cmd(serialdev, Command::StartupAnimation, &[0x02, 0, mask]);
 }
 
 fn brightness_cmd(serialdev: &str, arg: Option<u8>) {

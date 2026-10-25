@@ -35,6 +35,44 @@ pub enum GameOfLifeStartParam {
     BeaconToadBlinker = 0x06,
 }
 
+/// Animation to show when the LED Matrix powers on
+#[derive(Copy, Clone, Debug, PartialEq, clap::ValueEnum)]
+pub enum StartupAnimation {
+    /// A random one of the animations below
+    Random,
+    /// No animation
+    None,
+    Percentage,
+    ZigZag,
+    GolPattern1,
+    GolBeaconToadBlinker,
+    GolGlider,
+    Breathing,
+    Pong,
+    Snake,
+}
+
+impl StartupAnimation {
+    pub const ANIMATIONS: [StartupAnimation; 8] = [
+        StartupAnimation::Percentage,
+        StartupAnimation::ZigZag,
+        StartupAnimation::GolPattern1,
+        StartupAnimation::GolBeaconToadBlinker,
+        StartupAnimation::GolGlider,
+        StartupAnimation::Breathing,
+        StartupAnimation::Pong,
+        StartupAnimation::Snake,
+    ];
+
+    /// ID of the animation in the firmware, if it's a single animation
+    pub fn id(self) -> Option<u8> {
+        Self::ANIMATIONS
+            .iter()
+            .position(|a| *a == self)
+            .map(|i| i as u8)
+    }
+}
+
 /// LED Matrix
 #[derive(Parser, Debug)]
 #[command(arg_required_else_help = true)]
@@ -136,6 +174,16 @@ pub struct LedMatrixSubcommand {
     /// Set debug mode or get current mode, if no value provided
     #[arg(long)]
     pub debug_mode: Option<Option<bool>>,
+
+    /// Set the animation to show on startup or get current setting, if no value provided
+    #[arg(long)]
+    #[clap(value_enum)]
+    pub startup_animation: Option<Option<StartupAnimation>>,
+
+    /// On startup, show a random animation out of this comma separated list
+    #[arg(long, value_delimiter = ',', conflicts_with = "startup_animation")]
+    #[clap(value_enum)]
+    pub startup_animation_set: Option<Vec<StartupAnimation>>,
 
     /// Crash the firmware (TESTING ONLY!)
     #[arg(long)]
