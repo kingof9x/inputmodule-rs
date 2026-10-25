@@ -57,8 +57,8 @@ When no parameters are given, the current value is queried and returned.
 | SetPxCol     | 0x16 |   ` D ` |          |   50 Bytes | Send a column of pixels  |
 | FlushFB      | 0x17 |   ` D ` |          |            | Flush all columns        |
 | Version      | 0x20 |   `LDM` |  3 Bytes |            | Get firmware version     |
-| StartupAnim  | 0x21 |   `L  ` |          |    3 Bytes | Save startup animation   |
-| GetStartupAn | 0x21 |   `L  ` |  3 Bytes |            | Get startup animation    |
+| StartupAnim  | 0x21 |   `L  ` |          |  3/5 Bytes | Save startup animation   |
+| GetStartupAn | 0x21 |   `L  ` |  5 Bytes |            | Get startup animation    |
 
 #### Pattern (0x01)
 
@@ -123,8 +123,12 @@ Byte 0: Mode
         0x02 - Random animation, out of a set (see byte 2)
         0x03 - No animation
 Byte 1: Animation, for mode 0x01
-Byte 2: Bitmask of animations, for mode 0x02. Bit 0 is animation 0x00.
+Byte 2-4: Bitmask of animations, for mode 0x02, little endian.
+          Bit 0 is animation 0x00.
 ```
+
+Older tools may send only one byte for the bitmask. Then only the first 8
+animations can be picked.
 
 Animations:
 
@@ -136,3 +140,13 @@ Animations:
 - 0x05 - Breathing
 - 0x06 - Pong
 - 0x07 - Snake
+- 0x08 - Game of Life, R-pentomino
+- 0x09 - Game of Life, Acorn
+- 0x0A - Game of Life, Diehard
+- 0x0B - Game of Life, Lightweight spaceship
+- 0x0C - Game of Life, Middleweight spaceship
+- 0x0D - Game of Life, Heavyweight spaceship
+- 0x0E - Game of Life, Spaceship fleet
+- 0x0F - Game of Life, Octagon
+- 0x10 - Game of Life, Tumbler
+- 0x11 - Game of Life, Caterer

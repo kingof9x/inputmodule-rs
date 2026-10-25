@@ -123,6 +123,16 @@ pub enum GameOfLifeStartParam {
     Beacon = 0x04,
     Glider = 0x05,
     BeaconToadBlinker = 0x06,
+    RPentomino = 0x07,
+    Acorn = 0x08,
+    Diehard = 0x09,
+    LightweightSpaceship = 0x0A,
+    MiddleweightSpaceship = 0x0B,
+    HeavyweightSpaceship = 0x0C,
+    SpaceshipFleet = 0x0D,
+    Octagon = 0x0E,
+    Tumbler = 0x0F,
+    Caterer = 0x10,
 }
 
 #[derive(Copy, Clone, num_derive::FromPrimitive)]
@@ -406,7 +416,12 @@ pub fn parse_module_command(count: usize, buf: &[u8]) -> Option<Command> {
             }),
             Some(CommandVals::StartupAnimation) => {
                 if count == 3 + 3 {
-                    StartupAnimationConfig::from_args(buf[3], buf[4], buf[5])
+                    // Older tools only send the first 8 bits of the set
+                    StartupAnimationConfig::from_args(buf[3], buf[4], buf[5] as u32)
+                        .map(Command::SetStartupAnimation)
+                } else if count == 3 + 5 {
+                    let set = u32::from_le_bytes([buf[5], buf[6], buf[7], 0]);
+                    StartupAnimationConfig::from_args(buf[3], buf[4], set)
                         .map(Command::SetStartupAnimation)
                 } else {
                     Some(Command::GetStartupAnimation)
@@ -658,7 +673,7 @@ pub fn handle_command(
         }
         Command::GetStartupAnimation => {
             let mut response: [u8; 32] = [0; 32];
-            response[0..3].copy_from_slice(&load_startup_config().to_bytes());
+            response[0..5].copy_from_slice(&load_startup_config().to_bytes());
             Some(response)
         }
         _ => handle_generic_command(command),
