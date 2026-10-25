@@ -246,10 +246,6 @@ def perform_action(devices, action):
         if action in action_map:
             threading.Thread(target=action_map[action], args=(devices,), daemon=True).start(),
 
-    if action == "bootloader":
-        disable_devices(devices)
-        restart_hint()
-
     action_map = {
         "bootloader": bootloader_jump,
         "sleep": lambda dev: send_command(dev, CommandVals.Sleep, [True]),
@@ -270,6 +266,11 @@ def perform_action(devices, action):
     for dev in selected_devices:
         if action in action_map:
             action_map[action](dev)
+
+    # Only after sending the command, because it unselects the devices
+    if action == "bootloader":
+        disable_devices(devices)
+        restart_hint()
 
 def set_brightness(devices, value):
     selected_devices = get_selected_devices(devices)
