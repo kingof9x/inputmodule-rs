@@ -219,6 +219,10 @@ def run_gui(devices):
         fw_ver_combo.current(0)
         flash_btn = ttk.Button(bundled_fw_frame, text="Update", command=lambda: tk_flash_firmware(devices, releases, fw_ver_combo.get(), 'ledmatrix'), style="TButton")
         flash_btn.pack(side="left", padx=5, pady=5)
+        # The bundled firmware is the official release, downloaded when building the app
+        ttk.Label(bundled_fw_frame, text="Official firmware from Framework", style="TLabel").pack(side="left", padx=5, pady=5)
+        source_btn = ttk.Button(bundled_fw_frame, text="Release Notes", command=lambda: webbrowser.open(f"https://github.com/FrameworkComputer/inputmodule-rs/releases/tag/v{fw_ver_combo.get()}"), style="TButton")
+        source_btn.pack(side="left", padx=5, pady=5)
 
     # PWM Frequency Combo Box
     pwm_freq_frame = ttk.LabelFrame(tab3, text="PWM Frequency", style="TLabelframe")
@@ -329,10 +333,6 @@ def perform_action(devices, action):
         if action in action_map:
             threading.Thread(target=action_map[action], args=(devices,), daemon=True).start(),
 
-    if action == "bootloader":
-        disable_devices(devices)
-        restart_hint()
-
     action_map = {
         "bootloader": bootloader_jump,
         "sleep": lambda dev: send_command(dev, CommandVals.Sleep, [True]),
@@ -353,6 +353,11 @@ def perform_action(devices, action):
     for dev in selected_devices:
         if action in action_map:
             action_map[action](dev)
+
+    # Only after sending the command, because it unselects the devices
+    if action == "bootloader":
+        disable_devices(devices)
+        restart_hint()
 
 def set_brightness(devices, value):
     selected_devices = get_selected_devices(devices)

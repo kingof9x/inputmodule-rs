@@ -6,6 +6,7 @@
 # And modified, some changes already upstreamed
 
 # yapf: disable
+import string
 import sys
 import struct
 import subprocess
@@ -232,15 +233,13 @@ def to_str(b):
 def get_drives():
     drives = []
     if sys.platform == "win32":
-        # TODO: Could also check "VolumeName" == "RPI-RP2"
-        # But it should be okay because we check for the INFO file that no other drive would have
-        r = subprocess.check_output(["wmic", "PATH", "Win32_LogicalDisk",
-                                     "get", "DeviceID,",
-                                     "FileSystem,", "DriveType"])
-        for line in to_str(r).split('\n'):
-            words = re.split(r'\s+', line)
-            if len(words) >= 3 and words[1] == "2" and words[2] == "FAT":
-                drives.append(words[0])
+        # Don't use wmic, it's not included in newer Windows versions anymore.
+        # Just check every drive letter, below we filter for the INFO file
+        # that no other drive would have.
+        for letter in string.ascii_uppercase:
+            drive = letter + ":"
+            if os.path.exists(drive + "/"):
+                drives.append(drive)
     else:
         rootpath = "/media"
         if sys.platform == "darwin":

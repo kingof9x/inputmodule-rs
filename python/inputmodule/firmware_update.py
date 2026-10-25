@@ -11,7 +11,7 @@ def flash_firmware(dev, fw_path):
     print(f"Flashing {fw_path} onto {dev_to_str(dev)}")
 
     # First jump to bootloader
-    drives = uf2conv.list_drives()
+    drives = uf2conv.get_drives()
     if not drives:
         print("Jump to bootloader")
         bootloader_jump(dev)
