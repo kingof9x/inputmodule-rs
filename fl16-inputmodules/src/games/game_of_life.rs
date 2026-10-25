@@ -47,6 +47,36 @@ pub fn game_step(state: &mut LedmatrixState, _random: u8) {
     }
 }
 
+// Well known patterns, rotated to move or grow along the long side of the matrix.
+// The matrix wraps around at the edges.
+
+/// Chaotic for about 70 generations, then dies out
+const R_PENTOMINO: &[&str] = &[".XX", "XX.", ".X."];
+/// Chaotic for over 200 generations, then settles
+const ACORN: &[&str] = &["X..", "X.X", "...", ".X.", "X..", "X..", "X.."];
+/// Disappears completely after about 100 generations
+const DIEHARD: &[&str] = &[".X.", "XX.", "...", "...", "...", "X..", "X.X", "X.."];
+/// Lightweight spaceship, flies along the matrix forever
+const LWSS: &[&str] = &["XXX.", "X..X", "X...", "X...", ".X.X"];
+/// Middleweight spaceship
+const MWSS: &[&str] = &["XXX..", "X..X.", "X....", "X...X", "X....", ".X.X."];
+/// Heavyweight spaceship
+const HWSS: &[&str] = &[
+    "XXX..", "X..X.", "X....", "X...X", "X...X", "X....", ".X.X.",
+];
+/// Oscillator with period 5
+const OCTAGON: &[&str] = &[
+    "...XX...", "..X..X..", ".X....X.", "X......X", "X......X", ".X....X.", "..X..X..", "...XX...",
+];
+/// Oscillator with period 14 that flips upside down
+const TUMBLER: &[&str] = &[
+    "..XX.", "....X", "XX.X.", "X.X..", ".....", "X.X..", "XX.X.", "....X", "..XX.",
+];
+/// Oscillator with period 3
+const CATERER: &[&str] = &[
+    "..XXX.", "X.....", "X....X", ".X....", "...XX.", "....X.", "....X.", "....X.",
+];
+
 impl GameOfLifeState {
     // TODO: Integrate Grid into GameOfLifeStartParam because it's only used in one of the enum variants
     pub fn new(param: GameOfLifeStartParam, grid: &Grid) -> Self {
@@ -75,7 +105,32 @@ impl GameOfLifeState {
             GameOfLifeStartParam::BeaconToadBlinker => Self::beacon()
                 .combine(&Self::toad())
                 .combine(&Self::blinker()),
+            GameOfLifeStartParam::RPentomino => Self::from_pattern(R_PENTOMINO, 15, 3),
+            GameOfLifeStartParam::Acorn => Self::from_pattern(ACORN, 13, 3),
+            GameOfLifeStartParam::Diehard => Self::from_pattern(DIEHARD, 13, 3),
+            GameOfLifeStartParam::LightweightSpaceship => Self::from_pattern(LWSS, 14, 2),
+            GameOfLifeStartParam::MiddleweightSpaceship => Self::from_pattern(MWSS, 14, 2),
+            GameOfLifeStartParam::HeavyweightSpaceship => Self::from_pattern(HWSS, 13, 2),
+            GameOfLifeStartParam::SpaceshipFleet => Self::from_pattern(LWSS, 1, 2)
+                .combine(&Self::from_pattern(MWSS, 11, 2))
+                .combine(&Self::from_pattern(HWSS, 23, 2)),
+            GameOfLifeStartParam::Octagon => Self::from_pattern(OCTAGON, 13, 0),
+            GameOfLifeStartParam::Tumbler => Self::from_pattern(TUMBLER, 12, 1),
+            GameOfLifeStartParam::Caterer => Self::from_pattern(CATERER, 12, 1),
         }
+    }
+    /// Place a pattern with its top left corner at the given row and column.
+    /// Each string is a row, 'X' is an alive cell.
+    fn from_pattern(pattern: &[&str], top: usize, left: usize) -> Self {
+        let mut cells = [[Cell::Dead; WIDTH]; HEIGHT];
+        for (row, line) in pattern.iter().enumerate() {
+            for (col, c) in line.bytes().enumerate() {
+                if c == b'X' {
+                    cells[(top + row) % HEIGHT][(left + col) % WIDTH] = Cell::Alive;
+                }
+            }
+        }
+        GameOfLifeState { cells }
     }
     fn pattern1() -> Self {
         // Starts off with lots of alive cells, quickly reduced.

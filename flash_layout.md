@@ -41,8 +41,11 @@ Hardware Revisions:
 ## Settings (LED Matrix)
 
 - 4 bytes magic `FWST`
-- 1 byte record version (== 1)
-- 3 bytes startup animation setting, same format as the `StartupAnimation` command
-- 4 byte CRC checksum over the previous 8 bytes (CRC32B)
+- 1 byte record version (== 2)
+- 5 bytes startup animation setting, same format as the `StartupAnimation` command
+- 4 byte CRC checksum over the previous 10 bytes (CRC32B)
+
+Version 1 had a 1 byte bitmask, so 3 bytes setting and the checksum over 8 bytes.
+It is still read.
 
 If the block is empty or the checksum doesn't match, the defaults are used.
