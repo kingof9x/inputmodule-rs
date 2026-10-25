@@ -65,6 +65,16 @@ class GameOfLifeStartParam(IntEnum):
     Toad = 0x03
     Beacon = 0x04
     Glider = 0x05
+    Rpentomino = 0x07
+    Acorn = 0x08
+    Diehard = 0x09
+    Lightweightspaceship = 0x0A
+    Middleweightspaceship = 0x0B
+    Heavyweightspaceship = 0x0C
+    Spaceshipfleet = 0x0D
+    Octagon = 0x0E
+    Tumbler = 0x0F
+    Caterer = 0x10
 
     def __str__(self):
         return self.name.lower()

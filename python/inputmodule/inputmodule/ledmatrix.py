@@ -50,6 +50,16 @@ STARTUP_ANIMATIONS = [
     "Breathing",
     "Pong",
     "Snake",
+    "Game of Life: R-pentomino",
+    "Game of Life: Acorn",
+    "Game of Life: Diehard",
+    "Game of Life: Lightweight spaceship",
+    "Game of Life: Middleweight spaceship",
+    "Game of Life: Heavyweight spaceship",
+    "Game of Life: Spaceship fleet",
+    "Game of Life: Octagon",
+    "Game of Life: Tumbler",
+    "Game of Life: Caterer",
 ]
 # Names for the command line
 STARTUP_ANIMATION_NAMES = [
@@ -61,7 +71,18 @@ STARTUP_ANIMATION_NAMES = [
     "breathing",
     "pong",
     "snake",
+    "gol-r-pentomino",
+    "gol-acorn",
+    "gol-diehard",
+    "gol-lightweight-spaceship",
+    "gol-middleweight-spaceship",
+    "gol-heavyweight-spaceship",
+    "gol-spaceship-fleet",
+    "gol-octagon",
+    "gol-tumbler",
+    "gol-caterer",
 ]
+ALL_STARTUP_ANIMATIONS = (1 << len(STARTUP_ANIMATIONS)) - 1
 
 
 class StartupMode(IntEnum):
@@ -100,12 +121,13 @@ def percentage(dev, p):
     send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
 
 
-def set_startup_animation(dev, mode, animation=0, animation_set=0xFF):
+def set_startup_animation(dev, mode, animation=0, animation_set=ALL_STARTUP_ANIMATIONS):
     """Save which animation to show when the module powers on.
     animation is the index in STARTUP_ANIMATIONS, used in Fixed mode.
     animation_set is a bitmask of animations, used in RandomSet mode.
     The chosen animation plays once right away."""
-    send_command(dev, CommandVals.StartupAnimation, [mode, animation, animation_set])
+    mask = list(animation_set.to_bytes(3, "little"))
+    send_command(dev, CommandVals.StartupAnimation, [mode, animation] + mask)
 
 
 def get_startup_animation(dev):
@@ -118,13 +140,14 @@ def get_startup_animation(dev):
             res = s.read(RESPONSE_SIZE)
     except (IOError, OSError) as _ex:
         return None
-    if len(res) < 3:
+    if len(res) < 5:
         return None
     try:
         mode = StartupMode(res[0])
     except ValueError:
         return None
-    return (mode, res[1], res[2])
+    animation_set = int.from_bytes(res[2:5], "little")
+    return (mode, res[1], animation_set)
 
 
 def animate(dev, b: bool):
