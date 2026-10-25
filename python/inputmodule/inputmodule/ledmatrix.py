@@ -1,4 +1,5 @@
 import time
+from enum import IntEnum
 
 import serial
 
@@ -10,6 +11,7 @@ from inputmodule.inputmodule import (
     FWK_MAGIC,
     send_serial,
     brightness,
+    RESPONSE_SIZE,
 )
 from inputmodule.gui.gui_threading import get_status, set_status
 
@@ -38,6 +40,37 @@ PATTERNS = [
     "Triple Checkerboard",
     "Quad Checkerboard",
 ]
+# Startup animations, in the order of their IDs in the firmware
+STARTUP_ANIMATIONS = [
+    "Percentage",
+    "Zigzag",
+    "Game of Life: Pattern 1",
+    "Game of Life: Beacon, Toad, Blinker",
+    "Game of Life: Glider",
+    "Breathing",
+    "Pong",
+    "Snake",
+]
+# Names for the command line
+STARTUP_ANIMATION_NAMES = [
+    "percentage",
+    "zig-zag",
+    "gol-pattern1",
+    "gol-beacon-toad-blinker",
+    "gol-glider",
+    "breathing",
+    "pong",
+    "snake",
+]
+
+
+class StartupMode(IntEnum):
+    RandomAll = 0x00
+    Fixed = 0x01
+    RandomSet = 0x02
+    NoAnimation = 0x03
+
+
 PWM_FREQUENCIES = [
     "29kHz",
     "3.6kHz",
@@ -65,6 +98,33 @@ def get_pwm_freq(dev):
 def percentage(dev, p):
     """Fill a percentage of the screen. Bottom to top"""
     send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
+
+
+def set_startup_animation(dev, mode, animation=0, animation_set=0xFF):
+    """Save which animation to show when the module powers on.
+    animation is the index in STARTUP_ANIMATIONS, used in Fixed mode.
+    animation_set is a bitmask of animations, used in RandomSet mode.
+    The chosen animation plays once right away."""
+    send_command(dev, CommandVals.StartupAnimation, [mode, animation, animation_set])
+
+
+def get_startup_animation(dev):
+    """Get the startup animation setting as (mode, animation, animation_set).
+    Returns None if the firmware doesn't support it."""
+    try:
+        # Older firmware doesn't respond, so don't wait forever
+        with serial.Serial(dev.device, 115200, timeout=0.5) as s:
+            s.write(FWK_MAGIC + [CommandVals.StartupAnimation])
+            res = s.read(RESPONSE_SIZE)
+    except (IOError, OSError) as _ex:
+        return None
+    if len(res) < 3:
+        return None
+    try:
+        mode = StartupMode(res[0])
+    except ValueError:
+        return None
+    return (mode, res[1], res[2])
 
 
 def animate(dev, b: bool):

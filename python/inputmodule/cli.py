@@ -38,6 +38,11 @@ from inputmodule.inputmodule.ledmatrix import (
     get_animate,
     pwm_freq,
     get_pwm_freq,
+    set_startup_animation,
+    get_startup_animation,
+    StartupMode,
+    STARTUP_ANIMATIONS,
+    STARTUP_ANIMATION_NAMES,
     show_string,
     show_symbols,
     PATTERNS,
@@ -103,6 +108,22 @@ def main_cli():
     )
     parser.add_argument(
         "--get-pwm", help="Get current PWM Frequency", action="store_true"
+    )
+    parser.add_argument(
+        "--startup-animation",
+        help="Set the animation to show on startup",
+        choices=["random", "none"] + STARTUP_ANIMATION_NAMES,
+    )
+    parser.add_argument(
+        "--startup-animation-set",
+        help="On startup, show a random animation out of these",
+        nargs="+",
+        choices=STARTUP_ANIMATION_NAMES,
+    )
+    parser.add_argument(
+        "--get-startup-animation",
+        help="Get the startup animation setting",
+        action="store_true",
     )
     parser.add_argument(
         "--pattern", help="Display a pattern", type=str, choices=PATTERNS
@@ -295,6 +316,38 @@ def main_cli():
     elif args.get_pwm:
         p = get_pwm_freq(dev)
         print(f"Current PWM Frequency: {p} Hz")
+    elif args.startup_animation is not None:
+        if args.startup_animation == "random":
+            set_startup_animation(dev, StartupMode.RandomAll)
+        elif args.startup_animation == "none":
+            set_startup_animation(dev, StartupMode.NoAnimation)
+        else:
+            i = STARTUP_ANIMATION_NAMES.index(args.startup_animation)
+            set_startup_animation(dev, StartupMode.Fixed, i)
+    elif args.startup_animation_set is not None:
+        mask = 0
+        for name in args.startup_animation_set:
+            mask |= 1 << STARTUP_ANIMATION_NAMES.index(name)
+        set_startup_animation(dev, StartupMode.RandomSet, 0, mask)
+    elif args.get_startup_animation:
+        setting = get_startup_animation(dev)
+        if setting is None:
+            print("Firmware doesn't support setting the startup animation")
+        else:
+            (mode, animation, animation_set) = setting
+            if mode == StartupMode.RandomAll:
+                print("Startup animation: Random")
+            elif mode == StartupMode.Fixed:
+                print(f"Startup animation: {STARTUP_ANIMATIONS[animation]}")
+            elif mode == StartupMode.RandomSet:
+                names = [
+                    name
+                    for (i, name) in enumerate(STARTUP_ANIMATIONS)
+                    if animation_set & (1 << i)
+                ]
+                print(f"Startup animation: Random out of {', '.join(names)}")
+            else:
+                print("Startup animation: None")
     elif args.percentage is not None:
         if args.percentage > 100 or args.percentage < 0:
             print("Percentage must be 0-100")

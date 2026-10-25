@@ -37,6 +37,7 @@ class CommandVals(IntEnum):
     PwmFreq = 0x1E
     DebugMode = 0x1F
     Version = 0x20
+    StartupAnimation = 0x21
 
 
 class Game(IntEnum):
