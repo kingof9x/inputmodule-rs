@@ -33,6 +33,16 @@ pub enum GameOfLifeStartParam {
     Beacon = 0x04,
     Glider = 0x05,
     BeaconToadBlinker = 0x06,
+    RPentomino = 0x07,
+    Acorn = 0x08,
+    Diehard = 0x09,
+    LightweightSpaceship = 0x0A,
+    MiddleweightSpaceship = 0x0B,
+    HeavyweightSpaceship = 0x0C,
+    SpaceshipFleet = 0x0D,
+    Octagon = 0x0E,
+    Tumbler = 0x0F,
+    Caterer = 0x10,
 }
 
 /// Animation to show when the LED Matrix powers on
@@ -50,10 +60,20 @@ pub enum StartupAnimation {
     Breathing,
     Pong,
     Snake,
+    GolRPentomino,
+    GolAcorn,
+    GolDiehard,
+    GolLightweightSpaceship,
+    GolMiddleweightSpaceship,
+    GolHeavyweightSpaceship,
+    GolSpaceshipFleet,
+    GolOctagon,
+    GolTumbler,
+    GolCaterer,
 }
 
 impl StartupAnimation {
-    pub const ANIMATIONS: [StartupAnimation; 8] = [
+    pub const ANIMATIONS: [StartupAnimation; 18] = [
         StartupAnimation::Percentage,
         StartupAnimation::ZigZag,
         StartupAnimation::GolPattern1,
@@ -62,6 +82,16 @@ impl StartupAnimation {
         StartupAnimation::Breathing,
         StartupAnimation::Pong,
         StartupAnimation::Snake,
+        StartupAnimation::GolRPentomino,
+        StartupAnimation::GolAcorn,
+        StartupAnimation::GolDiehard,
+        StartupAnimation::GolLightweightSpaceship,
+        StartupAnimation::GolMiddleweightSpaceship,
+        StartupAnimation::GolHeavyweightSpaceship,
+        StartupAnimation::GolSpaceshipFleet,
+        StartupAnimation::GolOctagon,
+        StartupAnimation::GolTumbler,
+        StartupAnimation::GolCaterer,
     ];
 
     /// ID of the animation in the firmware, if it's a single animation

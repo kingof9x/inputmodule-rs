@@ -491,11 +491,11 @@ fn startup_animation_cmd(serialdev: &str, arg: Option<StartupAnimation>) {
         .expect("Failed to open port");
 
     if let Some(animation) = arg {
-        // Arguments: mode, animation, set of animations
+        // Arguments: mode, animation, set of animations (3 bytes)
         let args = match animation {
-            StartupAnimation::Random => [0x00, 0, 0xFF],
-            StartupAnimation::None => [0x03, 0, 0xFF],
-            animation => [0x01, animation.id().unwrap(), 0xFF],
+            StartupAnimation::Random => [0x00, 0, 0xFF, 0xFF, 0xFF],
+            StartupAnimation::None => [0x03, 0, 0xFF, 0xFF, 0xFF],
+            animation => [0x01, animation.id().unwrap(), 0xFF, 0xFF, 0xFF],
         };
         simple_cmd_port(&mut port, Command::StartupAnimation, &args);
     } else {
@@ -515,8 +515,9 @@ fn startup_animation_cmd(serialdev: &str, arg: Option<StartupAnimation>) {
             0x00 => println!("Startup animation: Random"),
             0x01 => println!("Startup animation: {}", name(response[1])),
             0x02 => {
-                let set: Vec<String> = (0..8)
-                    .filter(|i| response[2] & (1 << i) != 0)
+                let mask = u32::from_le_bytes([response[2], response[3], response[4], 0]);
+                let set: Vec<String> = (0..StartupAnimation::ANIMATIONS.len() as u8)
+                    .filter(|i| mask & (1 << i) != 0)
                     .map(name)
                     .collect();
                 println!("Startup animation: Random out of {}", set.join(", "));
@@ -528,14 +529,19 @@ fn startup_animation_cmd(serialdev: &str, arg: Option<StartupAnimation>) {
 }
 
 fn startup_animation_set_cmd(serialdev: &str, set: &[StartupAnimation]) {
-    let mut mask: u8 = 0;
+    let mut mask: u32 = 0;
     for animation in set {
         let Some(id) = animation.id() else {
             panic!("{animation:?} can't be part of the set");
         };
         mask |= 1 << id;
     }
-    simple_cmd(serialdev, Command::StartupAnimation, &[0x02, 0, mask]);
+    let mask = mask.to_le_bytes();
+    simple_cmd(
+        serialdev,
+        Command::StartupAnimation,
+        &[0x02, 0, mask[0], mask[1], mask[2]],
+    );
 }
 
 fn brightness_cmd(serialdev: &str, arg: Option<u8>) {
