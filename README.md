@@ -1,5 +1,45 @@
 # Framework Laptop 16 - Input Module Firmware/Software
 
+> **This is kingof9x's fork of [Framework's inputmodule-rs](https://github.com/FrameworkComputer/inputmodule-rs).**
+>
+> ### [⬇ Download the latest version](https://github.com/kingof9x/inputmodule-rs/releases/latest)
+>
+> Direct downloads: [ledmatrixgui.exe](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrixgui.exe) (Windows GUI) ·
+> [ledmatrix.uf2](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrix.uf2) (LED Matrix firmware) ·
+> [inputmodule-control.exe](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/inputmodule-control.exe) (Windows command line tool)
+
+## Changes from Framework's official version
+
+**LED Matrix firmware**
+
+- Choose the startup animation instead of always getting a random one:
+  one fixed animation, random from a set you pick, random from all, or none.
+  The choice is saved on the module and kept after power off.
+  See command `0x21` in [commands.md](commands.md).
+- 10 new Game of Life patterns: R-pentomino, Acorn, Diehard, lightweight,
+  middleweight and heavyweight spaceships, a spaceship fleet, Octagon,
+  Tumbler and Caterer. They can be played as games and used as startup
+  animations.
+
+**GUI (`ledmatrixgui.exe`)**
+
+- Startup animation settings on the Home tab.
+- New Game of Life patterns on the Games tab.
+- Shows the firmware version installed on each module (Firmware Update tab).
+- Notes that the bundled firmware update is Framework's official firmware,
+  with a link to its release notes.
+- Fixed: "Enter Bootloader" didn't do anything.
+- Fixed: the bundled firmware update failed on new Windows versions without `wmic`.
+
+**Command line tool (`inputmodule-control`) and Python CLI**
+
+- `--startup-animation` and `--startup-animation-set` options.
+- New Game of Life patterns for `--start-game game-of-life --game-param ...`.
+
+To install the custom firmware, open the GUI, click "Enter Bootloader",
+then copy `ledmatrix.uf2` onto the drive that appears. To go back to the
+official firmware, use the GUI's bundled firmware update.
+
 This repository contains both the firmware for the Framework Laptop 16 input modules,
 as well as the tool to control them.
 
