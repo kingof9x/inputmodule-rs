@@ -8,7 +8,8 @@ The last block is used to store the serial number.
 | Start    | End      | Size          | Name               |
 |----------|----------|---------------|--------------------|
 | 0x000000 | Dynamic  | Roughly 40K   | Firmware           |
-| TBD      | 0x0FF000 | TBD           | Persistent Storage |
+| TBD      | 0x0FE000 | TBD           | Persistent Storage |
+| 0x0FE000 | 0x0FF000 | 0x1000 (4K)   | Settings           |
 | 0x0FF000 | 0x100000 | 0x1000 (4K)   | Serial Number      |
 
 ###### QMK Keyboards
@@ -36,3 +37,12 @@ Hardware Revisions:
   - 3 Third Prototype, 27k Resistor
 - Keyboard, Numpad, Macropad
   - 1 First Prototype
+
+## Settings (LED Matrix)
+
+- 4 bytes magic `FWST`
+- 1 byte record version (== 1)
+- 3 bytes startup animation setting, same format as the `StartupAnimation` command
+- 4 byte CRC checksum over the previous 8 bytes (CRC32B)
+
+If the block is empty or the checksum doesn't match, the defaults are used.

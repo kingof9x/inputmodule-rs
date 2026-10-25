@@ -36,6 +36,8 @@ use crate::matrix::*;
 #[cfg(feature = "ledmatrix")]
 use crate::patterns::*;
 #[cfg(feature = "ledmatrix")]
+use crate::startup::*;
+#[cfg(feature = "ledmatrix")]
 use is31fl3741::PwmFreq;
 
 #[cfg(feature = "c1minimal")]
@@ -71,6 +73,7 @@ pub enum CommandVals {
     PwmFreq = 0x1E,
     DebugMode = 0x1F,
     Version = 0x20,
+    StartupAnimation = 0x21,
 }
 
 #[derive(num_derive::FromPrimitive)]
@@ -211,6 +214,10 @@ pub enum Command {
     GetPwmFreq,
     SetDebugMode(bool),
     GetDebugMode,
+    /// Save which animation to show on startup
+    #[cfg(feature = "ledmatrix")]
+    SetStartupAnimation(StartupAnimationConfig),
+    GetStartupAnimation,
     _Unknown,
 }
 
@@ -397,6 +404,14 @@ pub fn parse_module_command(count: usize, buf: &[u8]) -> Option<Command> {
             } else {
                 Command::GetDebugMode
             }),
+            Some(CommandVals::StartupAnimation) => {
+                if count == 3 + 3 {
+                    StartupAnimationConfig::from_args(buf[3], buf[4], buf[5])
+                        .map(Command::SetStartupAnimation)
+                } else {
+                    Some(Command::GetStartupAnimation)
+                }
+            }
             _ => None,
         }
     } else {
@@ -633,6 +648,17 @@ pub fn handle_command(
         Command::GetDebugMode => {
             let mut response: [u8; 32] = [0; 32];
             response[0] = state.debug_mode as u8;
+            Some(response)
+        }
+        Command::SetStartupAnimation(config) => {
+            save_startup_config(config);
+            // Play it right away, so the user can see what they picked
+            state.upcoming_frames = config.choose(random);
+            None
+        }
+        Command::GetStartupAnimation => {
+            let mut response: [u8; 32] = [0; 32];
+            response[0..3].copy_from_slice(&load_startup_config().to_bytes());
             Some(response)
         }
         _ => handle_generic_command(command),

@@ -109,11 +109,8 @@ const MAX_BRIGHTNESS: u8 = 50;
 // Provide an alias for our BSP so we can switch targets quickly.
 // Uncomment the BSP you included in Cargo.toml, the rest of the code does not need to change.
 use bsp::entry;
-use fl16_inputmodules::animations::*;
 #[cfg(feature = "evt")]
 use fl16_inputmodules::fl16::EVT_CALC_PIXEL;
-use fl16_inputmodules::games::pong_animation::*;
-use fl16_inputmodules::games::snake_animation::*;
 use fl16_inputmodules::{games::game_of_life, led_hal as bsp};
 use is31fl3741::devices::LedMatrix;
 #[cfg(not(feature = "evt"))]
@@ -148,6 +145,7 @@ use fl16_inputmodules::games::{pong, snake};
 use fl16_inputmodules::matrix::*;
 use fl16_inputmodules::patterns::*;
 use fl16_inputmodules::serialnum::{device_release, get_serialnum};
+use fl16_inputmodules::startup::load_startup_config;
 
 //                            FRA                - Framwork
 //                               KDE             - C1 LED Matrix
@@ -252,20 +250,7 @@ fn main() -> ! {
     };
     state.debug_mode = dip1.is_low().unwrap();
     if show_startup_animation(&state) {
-        state.upcoming_frames = Some(match get_random_byte(&rosc) % 8 {
-            0 => Animation::Percentage(StartupPercentageIterator::default()),
-            1 => Animation::ZigZag(ZigZagIterator::default()),
-            2 => Animation::Gof(GameOfLifeIterator::new(GameOfLifeStartParam::Pattern1, 200)),
-            3 => Animation::Gof(GameOfLifeIterator::new(
-                GameOfLifeStartParam::BeaconToadBlinker,
-                128,
-            )),
-            4 => Animation::Gof(GameOfLifeIterator::new(GameOfLifeStartParam::Glider, 128)),
-            5 => Animation::Breathing(BreathingIterator::default()),
-            6 => Animation::Pong(PongIterator::default()),
-            7 => Animation::Snake(SnakeIterator::default()),
-            _ => unreachable!(),
-        });
+        state.upcoming_frames = load_startup_config().choose(get_random_byte(&rosc));
     } else {
         // If no startup animation, keep display always on
         state.grid = percentage(100);

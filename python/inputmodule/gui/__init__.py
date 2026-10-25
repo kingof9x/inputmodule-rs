@@ -31,6 +31,10 @@ from inputmodule.inputmodule.ledmatrix import (
     pwm_freq,
     image_bl,
     image_greyscale,
+    set_startup_animation,
+    get_startup_animation,
+    StartupMode,
+    STARTUP_ANIMATIONS,
 )
 
 def update_brightness_slider(devices):
@@ -108,6 +112,11 @@ def run_gui(devices):
     brightness_scale = tk.Scale(brightness_frame, from_=0, to=255, orient='horizontal', command=lambda value: set_brightness(devices, value))
     brightness_scale.set(120)  # Default value
     brightness_scale.pack(fill="x", padx=5, pady=5)
+
+    # Startup Animation
+    startup_frame = ttk.LabelFrame(tab1, text="Startup Animation", style="TLabelframe")
+    startup_frame.pack(fill="x", padx=10, pady=5)
+    startup_widgets(startup_frame, devices)
 
     # Animation Control
     animation_frame = ttk.LabelFrame(tab1, text="Animation", style="TLabelframe")
@@ -235,6 +244,80 @@ def run_gui(devices):
         ttk.Button(device_control_frame, text=text, command=lambda a=action: perform_action(devices, a), style="TButton").pack(side="left", padx=5, pady=5)
 
     root.mainloop()
+
+def startup_widgets(frame, devices):
+    """Controls to choose which animation is shown when the module powers on"""
+    current = None
+    for dev in devices:
+        current = get_startup_animation(dev)
+        if current:
+            break
+
+    mode_var = tk.IntVar(value=StartupMode.RandomAll)
+    animation_combo = ttk.Combobox(frame, values=STARTUP_ANIMATIONS, style="TCombobox", state="readonly")
+    animation_combo.current(0)
+    set_vars = [tk.BooleanVar(value=True) for _ in STARTUP_ANIMATIONS]
+    if current:
+        (mode, animation, animation_set) = current
+        mode_var.set(mode)
+        if animation < len(STARTUP_ANIMATIONS):
+            animation_combo.current(animation)
+        for (i, var) in enumerate(set_vars):
+            var.set(bool(animation_set & (1 << i)))
+
+    set_frame = ttk.Frame(frame)
+    set_checkboxes = []
+    for (i, name) in enumerate(STARTUP_ANIMATIONS):
+        checkbox = ttk.Checkbutton(set_frame, text=name, variable=set_vars[i], style="TCheckbutton")
+        # Organize in columns of two
+        checkbox.grid(row=int(i / 2), column=i % 2, sticky="w", padx=5)
+        set_checkboxes.append(checkbox)
+
+    def update_enabled():
+        animation_combo.configure(state="readonly" if mode_var.get() == StartupMode.Fixed else "disabled")
+        for checkbox in set_checkboxes:
+            checkbox.configure(state="normal" if mode_var.get() == StartupMode.RandomSet else "disabled")
+
+    modes = {
+        "Random": StartupMode.RandomAll,
+        "Always this one:": StartupMode.Fixed,
+        "Random out of these:": StartupMode.RandomSet,
+        "None": StartupMode.NoAnimation,
+    }
+    for (text, mode) in modes.items():
+        ttk.Radiobutton(frame, text=text, variable=mode_var, value=mode, command=update_enabled).pack(anchor="w", padx=5)
+        if mode == StartupMode.Fixed:
+            animation_combo.pack(fill="x", padx=25, pady=2)
+        elif mode == StartupMode.RandomSet:
+            set_frame.pack(fill="x", padx=20, pady=2)
+    update_enabled()
+
+    status_label = ttk.Label(frame, text="", style="TLabel")
+
+    def save():
+        mask = 0
+        for (i, var) in enumerate(set_vars):
+            if var.get():
+                mask |= 1 << i
+        if mode_var.get() == StartupMode.RandomSet and mask == 0:
+            status_label.configure(text="Pick at least one animation")
+            return
+        for dev in get_selected_devices(devices):
+            set_startup_animation(dev, mode_var.get(), animation_combo.current(), mask)
+        status_label.configure(text="Saved. Playing it now.")
+
+    save_btn = ttk.Button(frame, text="Save", command=save, style="TButton")
+    save_btn.pack(side="left", padx=5, pady=5)
+    status_label.pack(side="left", padx=5, pady=5)
+
+    if not current:
+        # None of the devices support it
+        for child in frame.winfo_children():
+            if child not in (status_label, set_frame):
+                child.configure(state="disabled")
+        for checkbox in set_checkboxes:
+            checkbox.configure(state="disabled")
+        status_label.configure(text="Needs a firmware update")
 
 def perform_action(devices, action):
     if action.startswith("game_"):
