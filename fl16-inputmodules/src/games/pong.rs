@@ -114,8 +114,10 @@ impl PongState {
                     self.paddles.1 += 1;
                 }
             }
-            GameControlArg::SecondRight if self.paddles.1 >= 1 => {
-                self.paddles.1 -= 1;
+            GameControlArg::SecondRight => {
+                if self.paddles.1 >= 1 {
+                    self.paddles.1 -= 1;
+                }
             }
             _ => {}
         }

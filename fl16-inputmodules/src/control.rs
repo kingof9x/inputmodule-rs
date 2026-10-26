@@ -7,7 +7,9 @@ use crate::serialnum::{device_release, is_pre_release};
 #[cfg(feature = "b1display")]
 use crate::graphics::*;
 #[cfg(feature = "b1display")]
-use core::fmt::Write;
+use core::fmt::{Debug, Write};
+#[cfg(feature = "b1display")]
+use cortex_m::delay::Delay;
 #[cfg(feature = "b1display")]
 use embedded_graphics::Pixel;
 #[cfg(feature = "b1display")]
@@ -17,11 +19,9 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 #[cfg(feature = "b1display")]
-use embedded_hal::delay::DelayNs;
+use embedded_hal::blocking::spi;
 #[cfg(feature = "b1display")]
-use embedded_hal::digital::OutputPin;
-#[cfg(feature = "b1display")]
-use embedded_hal::spi::SpiDevice;
+use embedded_hal::digital::v2::OutputPin;
 #[cfg(feature = "b1display")]
 use heapless::String;
 #[cfg(feature = "b1display")]
@@ -215,9 +215,7 @@ pub enum Command {
     GetFps,
     SetPowerMode(u8),
     GetPowerMode,
-    /// Set the animation period in milliseconds
     SetAnimationPeriod(u16),
-    /// Get the animation period in milliseconds
     GetAnimationPeriod,
     #[cfg(feature = "ledmatrix")]
     SetPwmFreq(PwmFreqArg),
@@ -268,7 +266,6 @@ pub struct B1DIsplayState {
     pub screensaver: Option<ScreenSaverState>,
     pub power_mode: PowerMode,
     pub fps_config: FpsConfig,
-    /// Animation period in microseconds
     pub animation_period: u64,
 }
 
@@ -681,18 +678,19 @@ pub fn handle_command(
 }
 
 #[cfg(feature = "b1display")]
-pub fn handle_command<SPI, DC, RST, DELAY, const COLS: usize, const ROWS: usize>(
+pub fn handle_command<SPI, DC, CS, RST, const COLS: usize, const ROWS: usize>(
     command: &Command,
     state: &mut B1DIsplayState,
     logo_rect: Rectangle,
-    disp: &mut ST7306<SPI, DC, RST, COLS, ROWS>,
-    delay: &mut DELAY,
+    disp: &mut ST7306<SPI, DC, CS, RST, COLS, ROWS>,
+    delay: &mut Delay,
 ) -> Option<[u8; 32]>
 where
-    SPI: SpiDevice,
+    SPI: spi::Write<u8>,
     DC: OutputPin,
+    CS: OutputPin,
     RST: OutputPin,
-    DELAY: DelayNs,
+    <SPI as spi::Write<u8>>::Error: Debug,
 {
     match command {
         // TODO: Move to handle_generic_command

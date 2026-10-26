@@ -139,7 +139,7 @@ impl GameOfLifeState {
         for row in 0..HEIGHT {
             for col in 0..WIDTH {
                 let i = col * HEIGHT + row;
-                if i.is_multiple_of(2) || i.is_multiple_of(7) {
+                if i % 2 == 0 || i % 7 == 0 {
                     cells[row][col] = Cell::Alive;
                 }
             }
