@@ -25,16 +25,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Rust toolchain
-        run: rustup show
+        run: |
+          rustup toolchain install 1.74.0 --profile minimal --target thumbv6m-none-eabi --component clippy,rustfmt
+          rustup show
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libudev-dev
 
-      - run: cargo install cargo-make
+      - run: cargo +stable install cargo-make
 
-      - run: cargo install flip-link
+      - run: cargo +stable install flip-link
+      - run: cargo +stable install elf2uf2-rs
 
       - run: cargo make --cwd ledmatrix uf2
 
@@ -50,9 +53,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Rust toolchain
-        run: rustup show
+        run: |
+          rustup toolchain install 1.74.0 --profile minimal --target thumbv6m-none-eabi --component clippy,rustfmt
+          rustup show
 
-      - run: cargo install cargo-make
+      - run: cargo +stable install cargo-make
 
       - name: Build Windows tool
         run: cargo make --cwd inputmodule-control build-release

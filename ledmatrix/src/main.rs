@@ -6,7 +6,7 @@
 use cortex_m::delay::Delay;
 //use defmt::*;
 use defmt_rtt as _;
-use embedded_hal::digital::{InputPin, OutputPin};
+use embedded_hal::digital::v2::{InputPin, OutputPin};
 
 use rp2040_hal::{
     gpio::bank0::Gpio29,
@@ -109,12 +109,11 @@ const MAX_BRIGHTNESS: u8 = 50;
 // Provide an alias for our BSP so we can switch targets quickly.
 // Uncomment the BSP you included in Cargo.toml, the rest of the code does not need to change.
 use bsp::entry;
+#[cfg(not(feature = "evt"))]
+use fl16_inputmodules::fl16::DVT2_CALC_PIXEL;
 #[cfg(feature = "evt")]
 use fl16_inputmodules::fl16::EVT_CALC_PIXEL;
 use fl16_inputmodules::{games::game_of_life, led_hal as bsp};
-use is31fl3741::devices::LedMatrix;
-#[cfg(not(feature = "evt"))]
-use is31fl3741::devices::CALC_PIXEL;
 //use rp_pico as bsp;
 // use sparkfun_pro_micro_rp2040 as bsp;
 
@@ -129,8 +128,6 @@ use bsp::hal::{
 use fugit::RateExtU32;
 
 // USB Device support
-use usb_device::descriptor::lang_id::LangID;
-use usb_device::device::StringDescriptors;
 use usb_device::{class_prelude::*, prelude::*};
 
 // USB Communications Class Device support
@@ -141,6 +138,7 @@ use core::fmt::Write;
 use heapless::String;
 
 use fl16_inputmodules::control::*;
+use fl16_inputmodules::fl16::LedMatrix;
 use fl16_inputmodules::games::{pong, snake};
 use fl16_inputmodules::matrix::*;
 use fl16_inputmodules::patterns::*;
@@ -185,9 +183,6 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    // Create timer before USB bus since USB bus moves clocks.usb_clock
-    let timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(usb::UsbBus::new(
         pac.USBCTRL_REGS,
@@ -207,13 +202,10 @@ fn main() -> ! {
     };
 
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x32ac, 0x0020))
-        .strings(&[StringDescriptors::new(LangID::EN_US)
-            .manufacturer("Framework Computer Inc")
-            .product("LED Matrix Input Module")
-            .serial_number(serialnum)])
-        .unwrap()
+        .manufacturer("Framework Computer Inc")
+        .product("LED Matrix Input Module")
+        .serial_number(serialnum)
         .max_power(MAX_CURRENT)
-        .unwrap()
         .device_release(device_release())
         .device_class(USB_CLASS_CDC)
         .build();
@@ -227,14 +219,14 @@ fn main() -> ! {
 
     let i2c = bsp::hal::I2C::i2c1(
         pac.I2C1,
-        pins.gpio26.reconfigure::<gpio::FunctionI2C, gpio::PullUp>(),
-        pins.gpio27.reconfigure::<gpio::FunctionI2C, gpio::PullUp>(),
+        pins.gpio26.into_mode::<gpio::FunctionI2C>(),
+        pins.gpio27.into_mode::<gpio::FunctionI2C>(),
         1000.kHz(),
         &mut pac.RESETS,
         &clocks.peripheral_clock,
     );
 
-    let mut dip1 = pins.dip1.into_pull_up_input();
+    let dip1 = pins.dip1.into_pull_up_input();
 
     let mut state = LedmatrixState {
         grid: percentage(0),
@@ -259,7 +251,7 @@ fn main() -> ! {
     #[cfg(feature = "evt")]
     let mut matrix = LedMatrix::new(i2c, EVT_CALC_PIXEL);
     #[cfg(not(feature = "evt"))]
-    let mut matrix = LedMatrix::new(i2c, CALC_PIXEL);
+    let mut matrix = LedMatrix::new(i2c, DVT2_CALC_PIXEL);
     matrix
         .setup(&mut delay)
         .expect("failed to setup RGB controller");
@@ -285,6 +277,7 @@ fn main() -> ! {
 
     fill_grid_pixels(&state, &mut matrix);
 
+    let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut animation_timer = timer.get_counter().ticks();
     let mut game_timer = timer.get_counter().ticks();
     let mut sleep_timer = timer.get_counter().ticks();
@@ -293,11 +286,11 @@ fn main() -> ! {
     // Early revisions of the hardware didn't have it wired up, if that is the
     // case we have to ignore its state.
     let mut sleep_present = false;
-    let mut sleep = pins.sleep.into_pull_up_input();
+    let sleep = pins.sleep.into_pull_up_input();
     if sleep.is_low().unwrap() {
         sleep_present = true;
     }
-    let mut sleep = sleep.into_pull_down_input();
+    let sleep = sleep.into_pull_down_input();
     if sleep.is_high().unwrap() {
         sleep_present = true;
     }
@@ -600,7 +593,7 @@ fn handle_sleep(
     state: &mut LedmatrixState,
     matrix: &mut Foo,
     delay: &mut Delay,
-    led_enable: &mut gpio::Pin<Gpio29, gpio::FunctionSioOutput, gpio::PullDown>,
+    led_enable: &mut gpio::Pin<Gpio29, gpio::Output<gpio::PushPull>>,
 ) {
     match (state.sleeping.clone(), sleep_reason) {
         // Awake and staying awake
@@ -612,7 +605,7 @@ fn handle_sleep(
                 let mut brightness = state.brightness;
                 loop {
                     delay.delay_ms(100);
-                    brightness = brightness.saturating_sub(5);
+                    brightness = if brightness <= 5 { 0 } else { brightness - 5 };
                     set_brightness(state, brightness, matrix);
                     if brightness == 0 {
                         break;

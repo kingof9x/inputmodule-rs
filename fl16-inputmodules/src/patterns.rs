@@ -1,15 +1,12 @@
 use rp2040_hal::{
-    gpio::{
-        bank0::{Gpio26, Gpio27},
-        FunctionI2C, PullUp,
-    },
+    gpio::bank0::{Gpio26, Gpio27},
     pac::I2C1,
 };
 
+use crate::fl16::LedMatrix;
 use crate::led_hal as bsp;
 use crate::mapping::*;
 use crate::matrix::*;
-use is31fl3741::devices::LedMatrix;
 
 /// Bytes needed to represent all LEDs with a single bit
 /// math.ceil(WIDTH * HEIGHT / 8)
@@ -22,8 +19,8 @@ pub type Foo = LedMatrix<
     bsp::hal::I2C<
         I2C1,
         (
-            bsp::hal::gpio::Pin<Gpio26, FunctionI2C, PullUp>,
-            bsp::hal::gpio::Pin<Gpio27, FunctionI2C, PullUp>,
+            bsp::hal::gpio::Pin<Gpio26, bsp::hal::gpio::Function<bsp::hal::gpio::I2C>>,
+            bsp::hal::gpio::Pin<Gpio27, bsp::hal::gpio::Function<bsp::hal::gpio::I2C>>,
         ),
     >,
 >;

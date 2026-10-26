@@ -12,6 +12,9 @@
 
 **LED Matrix firmware**
 
+- Built on Framework's official 0.2.0 firmware release. Framework's newer,
+  unreleased code updates the USB and LED libraries, and with it the matrix
+  flickers when it's driven by a system monitor app.
 - Choose the startup animation instead of always getting a random one:
   one fixed animation, random from a set you pick, random from all, or none.
   The choice is saved on the module and kept after power off.
