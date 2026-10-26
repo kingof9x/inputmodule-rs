@@ -82,10 +82,17 @@ def run_gui(devices):
     device_checkboxes = {}
     versions = {}
     startup_settings = {}
+    # Devices whose port another program (like a system monitor) has open.
+    # On Windows only one program at a time can open a serial port.
+    in_use = set()
     for dev in devices:
-        version = get_version(dev)
+        try:
+            startup_settings[dev.name] = get_startup_animation(dev)
+        except (IOError, OSError):
+            startup_settings[dev.name] = None
+            in_use.add(dev.name)
+        version = "In use by another program" if dev.name in in_use else get_version(dev)
         versions[dev.name] = version
-        startup_settings[dev.name] = get_startup_animation(dev)
         device_info = (
             f"{dev.name}\nSerial No: {dev.serial_number}\nFW Version:{version}"
         )
@@ -120,7 +127,7 @@ def run_gui(devices):
     # Startup Animation
     startup_frame = ttk.LabelFrame(tab1, text="Startup Animation", style="TLabelframe")
     startup_frame.pack(fill="x", padx=10, pady=5)
-    startup_widgets(startup_frame, devices, startup_settings)
+    startup_widgets(startup_frame, devices, startup_settings, in_use)
 
     # Animation Control
     animation_frame = ttk.LabelFrame(tab1, text="Animation", style="TLabelframe")
@@ -218,8 +225,11 @@ def run_gui(devices):
     installed_fw_frame = ttk.LabelFrame(tab_fw, text="Installed Firmware", style="TLabelframe")
     installed_fw_frame.pack(fill="x", padx=10, pady=5)
     for dev in devices:
-        startup_support = "supported" if startup_settings[dev.name] else "not supported"
-        text = f"{dev.name}: Version {versions[dev.name]}, startup animation setting {startup_support}"
+        if dev.name in in_use:
+            text = f"{dev.name}: In use by another program. Close it and restart this app to check."
+        else:
+            startup_support = "supported" if startup_settings[dev.name] else "not supported"
+            text = f"{dev.name}: Version {versions[dev.name]}, startup animation setting {startup_support}"
         ttk.Label(installed_fw_frame, text=text, style="TLabel").pack(anchor="w", padx=5, pady=2)
 
     bootloader_frame = ttk.LabelFrame(tab_fw, text="Bootloader", style="TLabelframe")
@@ -270,7 +280,7 @@ def run_gui(devices):
 
     root.mainloop()
 
-def startup_widgets(frame, devices, startup_settings):
+def startup_widgets(frame, devices, startup_settings, in_use):
     """Controls to choose which animation is shown when the module powers on"""
     current = None
     for dev in devices:
@@ -342,7 +352,10 @@ def startup_widgets(frame, devices, startup_settings):
                 child.configure(state="disabled")
         for checkbox in set_checkboxes:
             checkbox.configure(state="disabled")
-        status_label.configure(text="Needs a firmware update")
+        if in_use:
+            status_label.configure(text="Close other programs using the LED Matrix, then restart this app")
+        else:
+            status_label.configure(text="Needs a firmware update")
 
 def perform_action(devices, action):
     if action.startswith("game_"):

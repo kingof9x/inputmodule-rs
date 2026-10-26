@@ -132,14 +132,16 @@ def set_startup_animation(dev, mode, animation=0, animation_set=ALL_STARTUP_ANIM
 
 def get_startup_animation(dev):
     """Get the startup animation setting as (mode, animation, animation_set).
-    Returns None if the firmware doesn't support it."""
-    try:
-        # Older firmware doesn't respond, so don't wait forever
-        with serial.Serial(dev.device, 115200, timeout=0.5) as s:
-            s.write(FWK_MAGIC + [CommandVals.StartupAnimation])
-            res = s.read(RESPONSE_SIZE)
-    except (IOError, OSError) as _ex:
-        return None
+    Returns None if the firmware doesn't support it.
+    Raises OSError if the port can't be opened, for example because another
+    program is using it."""
+    # Older firmware doesn't respond, so don't wait forever.
+    # But a sleeping module first fades back in, which takes up to a second.
+    with serial.Serial(dev.device, 115200, timeout=2) as s:
+        # Don't mistake leftover data from earlier commands for the response
+        s.reset_input_buffer()
+        s.write(FWK_MAGIC + [CommandVals.StartupAnimation])
+        res = s.read(RESPONSE_SIZE)
     if len(res) < 5:
         return None
     try:
