@@ -330,7 +330,11 @@ def main_cli():
             mask |= 1 << STARTUP_ANIMATION_NAMES.index(name)
         set_startup_animation(dev, StartupMode.RandomSet, 0, mask)
     elif args.get_startup_animation:
-        setting = get_startup_animation(dev)
+        try:
+            setting = get_startup_animation(dev)
+        except (IOError, OSError):
+            print(f"Can't open {dev.device}, is another program using it?")
+            return
         if setting is None:
             print("Firmware doesn't support setting the startup animation")
         else:
