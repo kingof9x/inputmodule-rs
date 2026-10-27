@@ -118,7 +118,7 @@ Parameters (the response of the query has the same format):
 
 ```plain
 Byte 0: Mode
-        0x00 - Random animation (default)
+        0x00 - Random animation, out of the first 8 (default)
         0x01 - Always the same animation (see byte 1)
         0x02 - Random animation, out of a set (see byte 2)
         0x03 - No animation

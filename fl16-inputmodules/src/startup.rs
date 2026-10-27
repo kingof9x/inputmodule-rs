@@ -21,10 +21,14 @@ const RECORD_VERSION: u8 = 2;
 /// Number of built-in startup animations
 pub const STARTUP_ANIMATION_COUNT: u8 = 18;
 const ALL_ANIMATIONS: u32 = (1 << STARTUP_ANIMATION_COUNT) - 1;
+/// Random mode only picks from the animations that existed before the
+/// Game of Life patterns were added, so the default startup looks the same.
+const RANDOM_ANIMATION_COUNT: u8 = 8;
+const RANDOM_ANIMATIONS: u32 = (1 << RANDOM_ANIMATION_COUNT) - 1;
 
 #[derive(Copy, Clone, PartialEq, Eq, num_derive::FromPrimitive)]
 pub enum StartupMode {
-    /// Randomly pick any of the animations (default)
+    /// Randomly pick one of the first 8 animations (default)
     RandomAll = 0x00,
     /// Always show the same animation
     Fixed = 0x01,
@@ -48,7 +52,7 @@ impl Default for StartupAnimationConfig {
         Self {
             mode: StartupMode::RandomAll,
             animation: 0,
-            set: ALL_ANIMATIONS,
+            set: RANDOM_ANIMATIONS,
         }
     }
 }
@@ -79,12 +83,12 @@ impl StartupAnimationConfig {
     /// Pick the animation to show according to this setting
     pub fn choose(&self, random: u8) -> Option<Animation> {
         match self.mode {
-            StartupMode::RandomAll => Some(startup_animation(random % STARTUP_ANIMATION_COUNT)),
+            StartupMode::RandomAll => Some(startup_animation(random % RANDOM_ANIMATION_COUNT)),
             StartupMode::Fixed => Some(startup_animation(self.animation)),
             StartupMode::RandomSet => {
                 let count = self.set.count_ones() as u8;
                 if count == 0 {
-                    return Some(startup_animation(random % STARTUP_ANIMATION_COUNT));
+                    return Some(startup_animation(random % RANDOM_ANIMATION_COUNT));
                 }
                 // Find the n-th animation that's in the set
                 let mut n = random % count;

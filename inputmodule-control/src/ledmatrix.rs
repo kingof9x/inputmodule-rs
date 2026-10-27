@@ -48,7 +48,7 @@ pub enum GameOfLifeStartParam {
 /// Animation to show when the LED Matrix powers on
 #[derive(Copy, Clone, Debug, PartialEq, clap::ValueEnum)]
 pub enum StartupAnimation {
-    /// A random one of the animations below
+    /// A random one of the first 8 animations below
     Random,
     /// No animation
     None,
