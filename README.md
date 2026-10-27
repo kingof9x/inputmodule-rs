@@ -1,47 +1,174 @@
 # Framework Laptop 16 - Input Module Firmware/Software
 
-> **This is kingof9x's fork of [Framework's inputmodule-rs](https://github.com/FrameworkComputer/inputmodule-rs).**
->
-> ### [⬇ Download the latest version](https://github.com/kingof9x/inputmodule-rs/releases/latest)
->
-> Direct downloads: [ledmatrixgui.exe](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrixgui.exe) (Windows GUI) ·
-> [ledmatrix.uf2](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrix.uf2) (LED Matrix firmware) ·
-> [inputmodule-control.exe](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/inputmodule-control.exe) (Windows command line tool)
+## About this fork
 
-## Changes from Framework's official version
+This is kingof9x's fork of [Framework's inputmodule-rs](https://github.com/FrameworkComputer/inputmodule-rs).
+It is **not a rewrite**: everything from Framework's version is still here and
+works the same way. The changes are all about the **LED Matrix** module. The
+other modules (2nd Display, C1 Minimal) are untouched.
 
-**LED Matrix firmware**
+### ⬇ Downloads
 
-- Built on Framework's official 0.2.0 firmware release. Framework's newer,
+[Latest version](https://github.com/kingof9x/inputmodule-rs/releases/latest) ·
+[ledmatrixgui.exe](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrixgui.exe) (Windows app) ·
+[ledmatrix.uf2](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrix.uf2) (LED Matrix firmware) ·
+[inputmodule-control.exe](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/inputmodule-control.exe) (Windows command line tool)
+
+### What's different from Framework's version
+
+**LED Matrix firmware (`ledmatrix.uf2`)**
+
+- **Choose the startup animation.** Framework's firmware always shows a random
+  animation when the laptop turns on. Here you can pick one animation to always
+  show, a random one out of a set you choose, a random one out of all of them,
+  or none. The choice is saved on the module and kept after power off.
+  (New command `0x21`, see [commands.md](commands.md). It's stored in its own
+  flash sector, see [flash_layout.md](flash_layout.md).)
+- **10 new Game of Life patterns:** R-pentomino, Acorn, Diehard, light, medium
+  and heavy spaceships, a spaceship fleet, Octagon, Tumbler and Caterer. They
+  can be played from the Games tab and used as startup animations.
+- **Built on Framework's official 0.2.0 firmware.** Framework's newer,
   unreleased code updates the USB and LED libraries, and with it the matrix
-  flickers when it's driven by a system monitor app.
-- Choose the startup animation instead of always getting a random one:
-  one fixed animation, random from a set you pick, random from all, or none.
-  The choice is saved on the module and kept after power off.
-  See command `0x21` in [commands.md](commands.md).
-- 10 new Game of Life patterns: R-pentomino, Acorn, Diehard, lightweight,
-  middleweight and heavyweight spaceships, a spaceship fleet, Octagon,
-  Tumbler and Caterer. They can be played as games and used as startup
-  animations.
+  flickers when a system monitor app keeps updating it. This fork's firmware
+  still reports version 0.2.0.
 
-**GUI (`ledmatrixgui.exe`)**
+![The starting position of each new Game of Life pattern on the 9 x 34 matrix](docs/screenshots/game-of-life-patterns.png)
 
-- Startup animation settings on the Home tab.
-- New Game of Life patterns on the Games tab.
-- Shows the firmware version installed on each module (Firmware Update tab).
+*Where each new pattern starts on the matrix. Drawn from the firmware's own pattern data, not a photo.*
+
+**Windows app (`ledmatrixgui.exe`) and Python library**
+
+- *Startup Animation* settings on the Home tab.
+- The new Game of Life patterns on the Games tab.
+- *Installed Firmware* box on the Firmware Update tab: shows each module's
+  firmware version and whether it supports the startup animation setting.
+- Fixed: *Enter Bootloader* didn't do anything.
+- Fixed: the bundled firmware update failed on newer Windows versions,
+  which no longer include `wmic`.
+- Says when another program (like a system monitor) is using a module,
+  instead of "not supported", and picks the module up again once that program
+  lets go of it. On Windows only one program at a time can talk to a module.
 - Notes that the bundled firmware update is Framework's official firmware,
   with a link to its release notes.
-- Fixed: "Enter Bootloader" didn't do anything.
-- Fixed: the bundled firmware update failed on new Windows versions without `wmic`.
 
-**Command line tool (`inputmodule-control`) and Python CLI**
+**Command line tools (`inputmodule-control` and `ledmatrixctl`)**
 
 - `--startup-animation` and `--startup-animation-set` options.
-- New Game of Life patterns for `--start-game game-of-life --game-param ...`.
+- The new patterns for `--start-game game-of-life --game-param ...`.
 
-To install the custom firmware, open the GUI, click "Enter Bootloader",
-then copy `ledmatrix.uf2` onto the drive that appears. To go back to the
-official firmware, use the GUI's bundled firmware update.
+| Home tab | Games tab |
+|---|---|
+| ![Home tab with the Startup Animation settings](docs/screenshots/ledmatrixgui-home.png) | ![Games tab with the new Game of Life patterns](docs/screenshots/ledmatrixgui-games.png) |
+
+![Firmware Update tab with the Installed Firmware box](docs/screenshots/ledmatrixgui-firmware.png)
+
+*Screenshots of this fork's app, taken on Linux with a simulated module, so the
+window looks a little different from Windows.*
+
+### Install
+
+**1. The app.** Download [`ledmatrixgui.exe`](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrixgui.exe)
+and run it, nothing needs installing. If Windows shows *"Windows protected your
+PC"*, click *More info* > *Run anyway* (the app isn't code-signed).
+
+**2. The firmware.** The app works with Framework's official firmware too, but
+the startup animation setting and the new patterns need this fork's firmware:
+
+1. Close other programs that use the LED Matrix, such as a system monitor app.
+2. Download [`ledmatrix.uf2`](https://github.com/kingof9x/inputmodule-rs/releases/latest/download/ledmatrix.uf2).
+3. Open `ledmatrixgui.exe`, go to the **Firmware Update** tab and click
+   **Enter Bootloader**. The matrix goes dark and a drive called `RPI-RP2`
+   appears (one per module if you have two selected).
+4. Copy `ledmatrix.uf2` onto each `RPI-RP2` drive. The drive disappears and
+   the module restarts with the new firmware.
+5. Restart `ledmatrixgui.exe`. The **Installed Firmware** box should now say
+   *"startup animation setting supported"*.
+
+**Going back to Framework's firmware:** on the **Firmware Update** tab, pick
+the version under *Bundled Updates* and click **Update**. Your startup choice
+stays in flash but Framework's firmware ignores it.
+
+On Linux, install the Python app with `pip install ./python` from this
+repository and run `ledmatrixgui`, see [python/README.md](python/README.md).
+
+### How to use it
+
+**Startup animation (Home tab)**
+
+1. Under *Startup Animation*, choose:
+   - **Random**: a random one of all 18 animations every time,
+   - **Always this one**: pick one from the list,
+   - **Random out of these**: tick the ones you like,
+   - **None**: no animation, the matrix stays dark until an app uses it.
+2. Click **Save**. The matrix plays the chosen animation once so you can see it.
+3. The setting goes to all modules ticked under *Detected Devices* at the bottom.
+
+**Game of Life patterns (Games tab):** click a pattern to start it, **Stop** to end it.
+
+**Command line** (`inputmodule-control.exe` on Windows):
+
+```sh
+# Show the current setting
+inputmodule-control led-matrix --startup-animation
+# Always show the same animation
+inputmodule-control led-matrix --startup-animation gol-acorn
+# Random out of a set
+inputmodule-control led-matrix --startup-animation-set snake,pong,gol-octagon
+# Back to the default, or no animation at all
+inputmodule-control led-matrix --startup-animation random
+inputmodule-control led-matrix --startup-animation none
+# Play a new pattern
+inputmodule-control led-matrix --start-game game-of-life --game-param spaceship-fleet
+```
+
+The Python command line tool takes the same options: `ledmatrixctl --startup-animation gol-acorn`.
+
+### Testing checklist
+
+Ticked items have been confirmed on a real Framework Laptop 16 (Windows, two
+LED Matrix modules). The rest pass the automated builds but haven't been
+checked on hardware yet. Tick them off as they're confirmed.
+
+**Firmware**
+- [ ] Flashing `ledmatrix.uf2` through *Enter Bootloader* + copying to `RPI-RP2` works on both modules
+- [x] No flicker while a system monitor app drives the matrix (0.2.0 base)
+- [x] *Always this one*: the chosen animation plays at every power on
+- [ ] *Random out of these*: only ticked animations show up over several restarts
+- [ ] *Random*: still picks different animations
+- [ ] *None*: no animation, the matrix stays dark until an app uses it
+- [ ] The setting survives a full shutdown, not just a restart
+- [ ] Each new Game of Life pattern plays as a startup animation
+- [ ] Sleep and wake (lid close / open) still work as before
+- [ ] Going back to Framework's firmware with the bundled update works, and coming back to this firmware keeps the saved setting
+
+**Windows app**
+- [x] *Enter Bootloader* puts the selected module into bootloader mode
+- [x] The bundled firmware update finds the `RPI-RP2` drive and flashes it
+- [ ] *Installed Firmware* shows the right version and "supported" / "not supported"
+- [ ] Each new pattern on the Games tab starts, and *Stop* ends it
+- [ ] *Save* on the Home tab plays the chosen animation and the setting is remembered after reopening the app
+- [ ] With a system monitor app running, the app says "In use by another program", and picks the module up within a few seconds of closing the monitor
+- [ ] With Framework's official firmware, the Startup Animation box says "Needs a firmware update"
+
+**Command line**
+- [ ] `inputmodule-control led-matrix --startup-animation` (no value) prints the current setting
+- [ ] Setting a fixed animation, a set, `random` and `none` all work
+- [ ] `--start-game game-of-life --game-param ...` works for the new patterns
+
+### Plan for Framework
+
+The goal is to offer these changes back to Framework in a few small pull
+requests, each one based on Framework's latest code:
+
+1. GUI fixes: *Enter Bootloader* and the bundled update without `wmic`.
+2. Startup animation setting (*Random* keeps picking from the original 8 animations).
+3. New Game of Life patterns.
+
+Fork-only things stay here: the download links and release workflow, and
+building the firmware on 0.2.0. Framework's pull requests go on top of their
+newer code, so the flicker there is something to report to them separately.
+
+---
 
 This repository contains both the firmware for the Framework Laptop 16 input modules,
 as well as the tool to control them.
