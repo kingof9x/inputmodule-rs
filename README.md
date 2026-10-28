@@ -27,6 +27,10 @@ other modules (2nd Display, C1 Minimal) are untouched.
 - **10 new Game of Life patterns:** R-pentomino, Acorn, Diehard, light, medium
   and heavy spaceships, a spaceship fleet, Octagon, Tumbler and Caterer. They
   can be played from the Games tab and used as startup animations.
+- **4 more Game of Life patterns, Pattern 2 to Pattern 5.** Like Pattern 1,
+  they start with the whole matrix filled with a dotted texture that breaks
+  into chaos and settles after about 2 minutes. Also in the Games tab and the
+  startup animation list.
 - **Built on Framework's official 0.2.0 firmware.** Framework's newer,
   unreleased code updates the USB and LED libraries, and with it the matrix
   flickers when a system monitor app keeps updating it. This fork's firmware
@@ -96,7 +100,7 @@ repository and run `ledmatrixgui`, see [python/README.md](python/README.md).
 **Startup animation (Home tab)**
 
 1. Under *Startup Animation*, choose:
-   - **Random**: a random one of all 18 animations every time,
+   - **Random**: a random one of all 22 animations every time,
    - **Always this one**: pick one from the list,
    - **Random out of these**: tick the ones you like,
    - **None**: no animation, the matrix stays dark until an app uses it.

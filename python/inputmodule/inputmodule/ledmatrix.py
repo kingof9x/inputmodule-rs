@@ -60,6 +60,10 @@ STARTUP_ANIMATIONS = [
     "Game of Life: Octagon",
     "Game of Life: Tumbler",
     "Game of Life: Caterer",
+    "Game of Life: Pattern 2",
+    "Game of Life: Pattern 3",
+    "Game of Life: Pattern 4",
+    "Game of Life: Pattern 5",
 ]
 # Names for the command line
 STARTUP_ANIMATION_NAMES = [
@@ -81,6 +85,10 @@ STARTUP_ANIMATION_NAMES = [
     "gol-octagon",
     "gol-tumbler",
     "gol-caterer",
+    "gol-pattern2",
+    "gol-pattern3",
+    "gol-pattern4",
+    "gol-pattern5",
 ]
 ALL_STARTUP_ANIMATIONS = (1 << len(STARTUP_ANIMATIONS)) - 1
 
