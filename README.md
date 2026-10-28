@@ -374,3 +374,16 @@ Additionally the panic message is written to XIP RAM, which can be read with [pi
 sudo picotool save -r 0x15000000 0x15004000 message.bin
 strings message.bin | head
 ```
+
+## Project status
+
+**Status:** Waiting on Callum  
+**Waiting on:** Callum: finish testing, then submit upstream  
+**Notes:** Fork of Framework's LED Matrix firmware and control app. Goal: send the changes upstream.  
+**Last updated:** 2026-10-28
+
+### Task list
+
+- [ ] Prepare and format the upstream pull request (Claude can help) (blocked)
+- [ ] Submit the pull request to FrameworkComputer/inputmodule-rs (blocked)
+
