@@ -117,6 +117,19 @@ impl GameOfLifeState {
             GameOfLifeStartParam::Octagon => Self::from_pattern(OCTAGON, 13, 0),
             GameOfLifeStartParam::Tumbler => Self::from_pattern(TUMBLER, 12, 1),
             GameOfLifeStartParam::Caterer => Self::from_pattern(CATERER, 12, 1),
+            // Like pattern 1, but with different spacing. They take about 200-300 generations to settle.
+            // Settles into still shapes
+            GameOfLifeStartParam::Pattern2 => Self::from_formula(|i| i % 3 == 0 || i % 5 == 0),
+            // Horizontal stripes, ends with blinkers
+            GameOfLifeStartParam::Pattern3 => Self::from_formula(|i| i % 6 == 0 || i % 8 == 0),
+            // Most cells alive at the start, settles into still shapes
+            GameOfLifeStartParam::Pattern4 => {
+                Self::from_formula(|i| i % 2 == 1 || i % 8 == 0 || i % 11 == 0)
+            }
+            // Ends with blinkers
+            GameOfLifeStartParam::Pattern5 => {
+                Self::from_formula(|i| i % 2 == 1 || i % 5 == 1 || i % 9 == 0)
+            }
         }
     }
     /// Place a pattern with its top left corner at the given row and column.
@@ -135,11 +148,15 @@ impl GameOfLifeState {
     fn pattern1() -> Self {
         // Starts off with lots of alive cells, quickly reduced.
         // Eventually reaches a stable pattern without changes.
+        Self::from_formula(|i| i % 2 == 0 || i % 7 == 0)
+    }
+    /// Cells are numbered column by column, top to bottom.
+    /// A cell is alive if the formula returns true for its number.
+    fn from_formula(alive: fn(usize) -> bool) -> Self {
         let mut cells = [[Cell::Dead; WIDTH]; HEIGHT];
         for row in 0..HEIGHT {
             for col in 0..WIDTH {
-                let i = col * HEIGHT + row;
-                if i % 2 == 0 || i % 7 == 0 {
+                if alive(col * HEIGHT + row) {
                     cells[row][col] = Cell::Alive;
                 }
             }

@@ -153,6 +153,10 @@ def run_gui(devices):
     animation_buttons = {
         "Current": "gol_current",
         "Pattern 1": "gol_pattern1",
+        "Pattern 2": "gol_pattern2",
+        "Pattern 3": "gol_pattern3",
+        "Pattern 4": "gol_pattern4",
+        "Pattern 5": "gol_pattern5",
         "Blinker": "gol_blinker",
         "Toad": "gol_toad",
         "Beacon": "gol_beacon",
@@ -420,6 +424,10 @@ def perform_action(devices, action):
         "gol_octagon": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 14]),
         "gol_tumbler": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 15]),
         "gol_caterer": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 16]),
+        "gol_pattern2": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 17]),
+        "gol_pattern3": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 18]),
+        "gol_pattern4": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 19]),
+        "gol_pattern5": lambda dev: send_command(dev, CommandVals.StartGame, [Game.GameOfLife, 20]),
         "game_stop": lambda dev: send_command(dev, CommandVals.GameControl, [GameControlVal.Quit]),
     }
     selected_devices = get_selected_devices(devices)
