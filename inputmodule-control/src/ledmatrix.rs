@@ -43,6 +43,10 @@ pub enum GameOfLifeStartParam {
     Octagon = 0x0E,
     Tumbler = 0x0F,
     Caterer = 0x10,
+    Pattern2 = 0x11,
+    Pattern3 = 0x12,
+    Pattern4 = 0x13,
+    Pattern5 = 0x14,
 }
 
 /// Animation to show when the LED Matrix powers on
@@ -70,10 +74,14 @@ pub enum StartupAnimation {
     GolOctagon,
     GolTumbler,
     GolCaterer,
+    GolPattern2,
+    GolPattern3,
+    GolPattern4,
+    GolPattern5,
 }
 
 impl StartupAnimation {
-    pub const ANIMATIONS: [StartupAnimation; 18] = [
+    pub const ANIMATIONS: [StartupAnimation; 22] = [
         StartupAnimation::Percentage,
         StartupAnimation::ZigZag,
         StartupAnimation::GolPattern1,
@@ -92,6 +100,10 @@ impl StartupAnimation {
         StartupAnimation::GolOctagon,
         StartupAnimation::GolTumbler,
         StartupAnimation::GolCaterer,
+        StartupAnimation::GolPattern2,
+        StartupAnimation::GolPattern3,
+        StartupAnimation::GolPattern4,
+        StartupAnimation::GolPattern5,
     ];
 
     /// ID of the animation in the firmware, if it's a single animation

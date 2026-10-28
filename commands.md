@@ -150,3 +150,7 @@ Animations:
 - 0x0F - Game of Life, Octagon
 - 0x10 - Game of Life, Tumbler
 - 0x11 - Game of Life, Caterer
+- 0x12 - Game of Life, Pattern 2
+- 0x13 - Game of Life, Pattern 3
+- 0x14 - Game of Life, Pattern 4
+- 0x15 - Game of Life, Pattern 5

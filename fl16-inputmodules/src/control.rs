@@ -133,6 +133,10 @@ pub enum GameOfLifeStartParam {
     Octagon = 0x0E,
     Tumbler = 0x0F,
     Caterer = 0x10,
+    Pattern2 = 0x11,
+    Pattern3 = 0x12,
+    Pattern4 = 0x13,
+    Pattern5 = 0x14,
 }
 
 #[derive(Copy, Clone, num_derive::FromPrimitive)]

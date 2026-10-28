@@ -19,7 +19,7 @@ const MAGIC: [u8; 4] = *b"FWST";
 const RECORD_VERSION: u8 = 2;
 
 /// Number of built-in startup animations
-pub const STARTUP_ANIMATION_COUNT: u8 = 18;
+pub const STARTUP_ANIMATION_COUNT: u8 = 22;
 const ALL_ANIMATIONS: u32 = (1 << STARTUP_ANIMATION_COUNT) - 1;
 /// Random mode only picks from the animations that existed before the
 /// Game of Life patterns were added, so the default startup looks the same.
@@ -131,7 +131,11 @@ pub fn startup_animation(index: u8) -> Animation {
                 14 => GameOfLifeStartParam::SpaceshipFleet,
                 15 => GameOfLifeStartParam::Octagon,
                 16 => GameOfLifeStartParam::Tumbler,
-                _ => GameOfLifeStartParam::Caterer,
+                17 => GameOfLifeStartParam::Caterer,
+                18 => GameOfLifeStartParam::Pattern2,
+                19 => GameOfLifeStartParam::Pattern3,
+                20 => GameOfLifeStartParam::Pattern4,
+                _ => GameOfLifeStartParam::Pattern5,
             };
             Animation::Gof(GameOfLifeIterator::new(pattern, 256))
         }
