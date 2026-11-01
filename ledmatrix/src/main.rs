@@ -479,7 +479,13 @@ fn main() -> ! {
                             .unwrap();
                             // let _ = serial.write(text.as_bytes());
 
-                            fill_grid_pixels(&state, &mut matrix);
+                            // Staging a greyscale column doesn't change what's shown, so don't
+                            // redraw the LEDs for it. A greyscale frame is 9 staged columns and one
+                            // commit; redrawing after each of the 10 commands made every frame take
+                            // about ten times as long and the panel lag behind the computer.
+                            if !matches!(command, Command::StageGreyCol(_, _)) {
+                                fill_grid_pixels(&state, &mut matrix);
+                            }
                         }
                         (None, _) => {}
                     }
