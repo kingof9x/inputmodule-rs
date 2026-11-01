@@ -31,6 +31,10 @@ other modules (2nd Display, C1 Minimal) are untouched.
   they start with the whole matrix filled with a dotted texture that breaks
   into chaos and settles after about 2 minutes. Also in the Games tab and the
   startup animation list.
+- **Faster greyscale pictures.** The firmware used to redraw all LEDs after
+  every command, so one greyscale picture (9 column commands and a "show it"
+  command) was drawn 10 times. Now it's drawn once, and the matrix keeps up
+  with apps that send a lot of pictures, like system monitors and games.
 - **Built on Framework's official 0.2.0 firmware.** Framework's newer,
   unreleased code updates the USB and LED libraries, and with it the matrix
   flickers when a system monitor app keeps updating it. This fork's firmware
@@ -167,6 +171,7 @@ requests, each one based on Framework's latest code:
 1. GUI fixes: *Enter Bootloader* and the bundled update without `wmic`.
 2. Startup animation setting (*Random* keeps picking from the original 8 animations).
 3. New Game of Life patterns.
+4. Faster greyscale pictures (one small change, already tested on hardware).
 
 Fork-only things stay here: the download links and release workflow, and
 building the firmware on 0.2.0. Framework's pull requests go on top of their
