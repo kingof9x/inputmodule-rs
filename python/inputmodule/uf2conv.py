@@ -9,7 +9,6 @@
 import string
 import sys
 import struct
-import subprocess
 import re
 import os
 import os.path
