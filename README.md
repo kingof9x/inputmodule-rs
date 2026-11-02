@@ -135,8 +135,6 @@ checked on hardware yet. Tick them off as they're confirmed.
 
 **Firmware**
 - [ ] Flashing `ledmatrix.uf2` through *Enter Bootloader* + copying to `RPI-RP2` works on both modules
-- [x] No flicker while a system monitor app drives the matrix (0.2.0 base)
-- [x] *Always this one*: the chosen animation plays at every power on
 - [ ] *Random out of these*: only ticked animations show up over several restarts
 - [ ] *Random*: still picks different animations
 - [ ] *None*: no animation, the matrix stays dark until an app uses it
@@ -146,8 +144,6 @@ checked on hardware yet. Tick them off as they're confirmed.
 - [ ] Going back to Framework's firmware with the bundled update works, and coming back to this firmware keeps the saved setting
 
 **Windows app**
-- [x] *Enter Bootloader* puts the selected module into bootloader mode
-- [x] The bundled firmware update finds the `RPI-RP2` drive and flashes it
 - [ ] *Installed Firmware* shows the right version and "supported" / "not supported"
 - [ ] Each new pattern on the Games tab starts, and *Stop* ends it
 - [ ] *Save* on the Home tab plays the chosen animation and the setting is remembered after reopening the app
@@ -381,10 +377,10 @@ strings message.bin | head
 
 ## Project status
 
-**Status:** Waiting on Callum  
-**Waiting on:** Callum: finish testing, then submit upstream  
+**Status:** Waiting on developer  
+**Waiting on:** Developer: finish testing, then submit upstream  
 **Notes:** Fork of Framework's LED Matrix firmware and control app. Goal: send the changes upstream.  
-**Last updated:** 2026-10-28
+**Last updated:** 2026-11-02
 
 ### Task list
 
