@@ -424,6 +424,10 @@ pub fn parse_module_command(count: usize, buf: &[u8]) -> Option<Command> {
                     let set = u32::from_le_bytes([buf[5], buf[6], buf[7], 0]);
                     StartupAnimationConfig::from_args(buf[3], buf[4], set)
                         .map(Command::SetStartupAnimation)
+                } else if count == 3 + 6 {
+                    let set = u32::from_le_bytes([buf[5], buf[6], buf[7], buf[8]]);
+                    StartupAnimationConfig::from_args(buf[3], buf[4], set)
+                        .map(Command::SetStartupAnimation)
                 } else {
                     Some(Command::GetStartupAnimation)
                 }
@@ -674,7 +678,7 @@ pub fn handle_command(
         }
         Command::GetStartupAnimation => {
             let mut response: [u8; 32] = [0; 32];
-            response[0..5].copy_from_slice(&load_startup_config().to_bytes());
+            response[0..6].copy_from_slice(&load_startup_config().to_bytes());
             Some(response)
         }
         _ => handle_generic_command(command),

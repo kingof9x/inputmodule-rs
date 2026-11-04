@@ -64,6 +64,12 @@ STARTUP_ANIMATIONS = [
     "Game of Life: Pattern 3",
     "Game of Life: Pattern 4",
     "Game of Life: Pattern 5",
+    "Rabbit hole",
+    "Digital rain",
+    "Hourglass",
+    "Warp speed",
+    "Power on",
+    "Campfire",
 ]
 # Names for the command line
 STARTUP_ANIMATION_NAMES = [
@@ -89,6 +95,12 @@ STARTUP_ANIMATION_NAMES = [
     "gol-pattern3",
     "gol-pattern4",
     "gol-pattern5",
+    "rabbit-hole",
+    "digital-rain",
+    "hourglass",
+    "warp-speed",
+    "power-on",
+    "campfire",
 ]
 ALL_STARTUP_ANIMATIONS = (1 << len(STARTUP_ANIMATIONS)) - 1
 
@@ -134,7 +146,12 @@ def set_startup_animation(dev, mode, animation=0, animation_set=ALL_STARTUP_ANIM
     animation is the index in STARTUP_ANIMATIONS, used in Fixed mode.
     animation_set is a bitmask of animations, used in RandomSet mode.
     The chosen animation plays once right away."""
-    mask = list(animation_set.to_bytes(3, "little"))
+    # Older firmware only understands 3 bytes of the set, so the 4th one (the newest
+    # animations) is only sent when it matters, and then the firmware must be new anyway
+    if mode == StartupMode.RandomSet and animation_set >> 24:
+        mask = list(animation_set.to_bytes(4, "little"))
+    else:
+        mask = list((animation_set & 0xFFFFFF).to_bytes(3, "little"))
     send_command(dev, CommandVals.StartupAnimation, [mode, animation] + mask)
 
 
@@ -156,7 +173,8 @@ def get_startup_animation(dev):
         mode = StartupMode(res[0])
     except ValueError:
         return None
-    animation_set = int.from_bytes(res[2:5], "little")
+    # Older firmware sends 3 bytes of the set and a 0 after them
+    animation_set = int.from_bytes(res[2:6], "little")
     return (mode, res[1], animation_set)
 
 

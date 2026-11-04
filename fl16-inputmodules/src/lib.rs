@@ -20,6 +20,8 @@ pub mod mapping;
 #[cfg(feature = "ledmatrix")]
 pub mod animations;
 #[cfg(feature = "ledmatrix")]
+pub mod boot;
+#[cfg(feature = "ledmatrix")]
 pub mod matrix;
 #[cfg(feature = "ledmatrix")]
 pub mod patterns;

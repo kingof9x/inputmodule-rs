@@ -1,3 +1,4 @@
+use crate::boot::*;
 use crate::control::*;
 use crate::games::game_of_life::*;
 use crate::games::pong_animation::*;
@@ -19,6 +20,12 @@ pub enum Animation {
     Breathing(BreathingIterator),
     Snake(SnakeIterator),
     Pong(PongIterator),
+    RabbitHole(RabbitHoleIterator),
+    DigitalRain(DigitalRainIterator),
+    Hourglass(HourglassIterator),
+    WarpSpeed(WarpSpeedIterator),
+    PowerOn(PowerOnIterator),
+    Campfire(CampfireIterator),
 }
 impl Iterator for Animation {
     type Item = Grid;
@@ -31,6 +38,12 @@ impl Iterator for Animation {
             Animation::Breathing(x) => x.next(),
             Animation::Snake(x) => x.next(),
             Animation::Pong(x) => x.next(),
+            Animation::RabbitHole(x) => x.next(),
+            Animation::DigitalRain(x) => x.next(),
+            Animation::Hourglass(x) => x.next(),
+            Animation::WarpSpeed(x) => x.next(),
+            Animation::PowerOn(x) => x.next(),
+            Animation::Campfire(x) => x.next(),
         }
     }
 }

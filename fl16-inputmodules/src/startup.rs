@@ -3,6 +3,7 @@
 //! The setting lives in its own 4K flash sector, right below the serial number.
 //! See `flash_layout.md`.
 use crate::animations::*;
+use crate::boot::*;
 use crate::control::GameOfLifeStartParam;
 use crate::games::pong_animation::*;
 use crate::games::snake_animation::*;
@@ -15,11 +16,11 @@ const SECTOR_SIZE: u32 = 0x1000;
 /// Smallest amount of flash that can be programmed at once
 const PAGE_SIZE: usize = 256;
 const MAGIC: [u8; 4] = *b"FWST";
-/// Version 1 stored the set of animations in 1 byte, version 2 uses 3 bytes
-const RECORD_VERSION: u8 = 2;
+/// Version 1 stored the set of animations in 1 byte, version 2 in 3 bytes, version 3 in 4 bytes
+const RECORD_VERSION: u8 = 3;
 
 /// Number of built-in startup animations
-pub const STARTUP_ANIMATION_COUNT: u8 = 22;
+pub const STARTUP_ANIMATION_COUNT: u8 = 28;
 const ALL_ANIMATIONS: u32 = (1 << STARTUP_ANIMATION_COUNT) - 1;
 
 #[derive(Copy, Clone, PartialEq, Eq, num_derive::FromPrimitive)]
@@ -70,28 +71,37 @@ impl StartupAnimationConfig {
         })
     }
 
-    /// Mode, animation and the set of animations as 3 bytes, little endian
-    pub fn to_bytes(self) -> [u8; 5] {
+    /// Mode, animation and the set of animations as 4 bytes, little endian
+    pub fn to_bytes(self) -> [u8; 6] {
         let set = self.set.to_le_bytes();
-        [self.mode as u8, self.animation, set[0], set[1], set[2]]
+        [
+            self.mode as u8,
+            self.animation,
+            set[0],
+            set[1],
+            set[2],
+            set[3],
+        ]
     }
 
     /// Pick the animation to show according to this setting
     pub fn choose(&self, random: u8) -> Option<Animation> {
         match self.mode {
-            StartupMode::RandomAll => Some(startup_animation(random % STARTUP_ANIMATION_COUNT)),
-            StartupMode::Fixed => Some(startup_animation(self.animation)),
+            StartupMode::RandomAll => {
+                Some(startup_animation(random % STARTUP_ANIMATION_COUNT, random))
+            }
+            StartupMode::Fixed => Some(startup_animation(self.animation, random)),
             StartupMode::RandomSet => {
                 let count = self.set.count_ones() as u8;
                 if count == 0 {
-                    return Some(startup_animation(random % STARTUP_ANIMATION_COUNT));
+                    return Some(startup_animation(random % STARTUP_ANIMATION_COUNT, random));
                 }
                 // Find the n-th animation that's in the set
                 let mut n = random % count;
                 for i in 0..STARTUP_ANIMATION_COUNT {
                     if self.set & (1 << i) != 0 {
                         if n == 0 {
-                            return Some(startup_animation(i));
+                            return Some(startup_animation(i, random));
                         }
                         n -= 1;
                     }
@@ -103,7 +113,8 @@ impl StartupAnimationConfig {
     }
 }
 
-pub fn startup_animation(index: u8) -> Animation {
+/// The animation with this number. `seed` varies the animations that use randomness.
+pub fn startup_animation(index: u8, seed: u8) -> Animation {
     match index {
         0 => Animation::Percentage(StartupPercentageIterator::default()),
         1 => Animation::ZigZag(ZigZagIterator::default()),
@@ -116,6 +127,12 @@ pub fn startup_animation(index: u8) -> Animation {
         5 => Animation::Breathing(BreathingIterator::default()),
         6 => Animation::Pong(PongIterator::default()),
         7 => Animation::Snake(SnakeIterator::default()),
+        22 => Animation::RabbitHole(RabbitHoleIterator::default()),
+        23 => Animation::DigitalRain(DigitalRainIterator::new(seed)),
+        24 => Animation::Hourglass(HourglassIterator::new(seed)),
+        25 => Animation::WarpSpeed(WarpSpeedIterator::new(seed)),
+        26 => Animation::PowerOn(PowerOnIterator::default()),
+        27 => Animation::Campfire(CampfireIterator::new(seed)),
         _ => {
             let pattern = match index {
                 8 => GameOfLifeStartParam::RPentomino,
@@ -146,7 +163,7 @@ fn checksum(data: &[u8]) -> u32 {
 /// Read the setting from flash. Falls back to the default if nothing valid was saved.
 pub fn load_startup_config() -> StartupAnimationConfig {
     // Flash is mapped into memory, just read it from there
-    let ptr = (FLASH_OFFSET + SETTINGS_BLOCK as usize) as *const [u8; 14];
+    let ptr = (FLASH_OFFSET + SETTINGS_BLOCK as usize) as *const [u8; 15];
     let raw = unsafe { core::ptr::read_volatile(ptr) };
     if raw[0..4] != MAGIC {
         return StartupAnimationConfig::default();
@@ -156,15 +173,20 @@ pub fn load_startup_config() -> StartupAnimationConfig {
     let len = match raw[4] {
         1 => 8,
         2 => 10,
+        3 => 11,
         _ => return StartupAnimationConfig::default(),
     };
     let actual_checksum = u32::from_le_bytes([raw[len], raw[len + 1], raw[len + 2], raw[len + 3]]);
     if checksum(&raw[0..len]) != actual_checksum {
         return StartupAnimationConfig::default();
     }
-    let set = u32::from_le_bytes([raw[7], raw[8], raw[9], 0]);
-    // Version 1 only stored the first byte of the set
-    let set = if raw[4] == 1 { set & 0xFF } else { set };
+    let set = u32::from_le_bytes([raw[7], raw[8], raw[9], raw[10]]);
+    // Older versions stored fewer bytes of the set
+    let set = match raw[4] {
+        1 => set & 0xFF,
+        2 => set & 0xFF_FFFF,
+        _ => set,
+    };
     StartupAnimationConfig::from_args(raw[5], raw[6], set).unwrap_or_default()
 }
 
@@ -180,9 +202,9 @@ pub fn save_startup_config(config: &StartupAnimationConfig) {
     let mut page = [0xFFu8; PAGE_SIZE];
     page[0..4].copy_from_slice(&MAGIC);
     page[4] = RECORD_VERSION;
-    page[5..10].copy_from_slice(&config.to_bytes());
-    let crc = checksum(&page[0..10]);
-    page[10..14].copy_from_slice(&crc.to_le_bytes());
+    page[5..11].copy_from_slice(&config.to_bytes());
+    let crc = checksum(&page[0..11]);
+    page[11..15].copy_from_slice(&crc.to_le_bytes());
 
     // Nothing may read from flash while it's being written.
     // The second core is never started, so it's still waiting in ROM.

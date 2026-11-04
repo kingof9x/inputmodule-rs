@@ -123,12 +123,12 @@ Byte 0: Mode
         0x02 - Random animation, out of a set (see byte 2)
         0x03 - No animation
 Byte 1: Animation, for mode 0x01
-Byte 2-4: Bitmask of animations, for mode 0x02, little endian.
+Byte 2-5: Bitmask of animations, for mode 0x02, little endian.
           Bit 0 is animation 0x00.
 ```
 
-Older tools may send only one byte for the bitmask. Then only the first 8
-animations can be picked.
+The bitmask may also be sent as 1 or 3 bytes. With 1 byte only the first 8
+animations can be picked, with 3 bytes the first 24.
 
 Animations:
 
@@ -154,3 +154,9 @@ Animations:
 - 0x13 - Game of Life, Pattern 3
 - 0x14 - Game of Life, Pattern 4
 - 0x15 - Game of Life, Pattern 5
+- 0x16 - Rabbit hole (a rabbit hops down and dives into a hole)
+- 0x17 - Digital rain (code rain that leaves a rabbit behind)
+- 0x18 - Hourglass (sand runs through the middle)
+- 0x19 - Warp speed (stars rush out, then a white flash)
+- 0x1A - Power on (an old TV switching on)
+- 0x1B - Campfire (flames grow and die down to embers)
