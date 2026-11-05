@@ -515,7 +515,7 @@ fn startup_animation_cmd(serialdev: &str, arg: Option<StartupAnimation>) {
             0x00 => println!("Startup animation: Random"),
             0x01 => println!("Startup animation: {}", name(response[1])),
             0x02 => {
-                let mask = u32::from_le_bytes([response[2], response[3], response[4], 0]);
+                let mask = u32::from_le_bytes([response[2], response[3], response[4], response[5]]);
                 let set: Vec<String> = (0..StartupAnimation::ANIMATIONS.len() as u8)
                     .filter(|i| mask & (1 << i) != 0)
                     .map(name)
@@ -537,11 +537,10 @@ fn startup_animation_set_cmd(serialdev: &str, set: &[StartupAnimation]) {
         mask |= 1 << id;
     }
     let mask = mask.to_le_bytes();
-    simple_cmd(
-        serialdev,
-        Command::StartupAnimation,
-        &[0x02, 0, mask[0], mask[1], mask[2]],
-    );
+    // Only send the 4th byte when needed, older firmware only understands 3
+    let args = [0x02, 0, mask[0], mask[1], mask[2], mask[3]];
+    let len = if mask[3] == 0 { 5 } else { 6 };
+    simple_cmd(serialdev, Command::StartupAnimation, &args[..len]);
 }
 
 fn brightness_cmd(serialdev: &str, arg: Option<u8>) {

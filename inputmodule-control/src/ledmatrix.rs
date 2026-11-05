@@ -78,10 +78,16 @@ pub enum StartupAnimation {
     GolPattern3,
     GolPattern4,
     GolPattern5,
+    RabbitHole,
+    DigitalRain,
+    Hourglass,
+    WarpSpeed,
+    PowerOn,
+    Campfire,
 }
 
 impl StartupAnimation {
-    pub const ANIMATIONS: [StartupAnimation; 22] = [
+    pub const ANIMATIONS: [StartupAnimation; 28] = [
         StartupAnimation::Percentage,
         StartupAnimation::ZigZag,
         StartupAnimation::GolPattern1,
@@ -104,6 +110,12 @@ impl StartupAnimation {
         StartupAnimation::GolPattern3,
         StartupAnimation::GolPattern4,
         StartupAnimation::GolPattern5,
+        StartupAnimation::RabbitHole,
+        StartupAnimation::DigitalRain,
+        StartupAnimation::Hourglass,
+        StartupAnimation::WarpSpeed,
+        StartupAnimation::PowerOn,
+        StartupAnimation::Campfire,
     ];
 
     /// ID of the animation in the firmware, if it's a single animation
