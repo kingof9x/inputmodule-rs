@@ -386,10 +386,10 @@ strings message.bin | head
 
 ## Project status
 
-**Status:** Waiting on developer  
+**Status:** Paused  
 **Waiting on:** Developer: finish testing, then submit upstream  
 **Notes:** Fork of Framework's LED Matrix firmware and control app. Goal: send the changes upstream.  
-**Last updated:** 2026-11-02
+**Last updated:** 2026-11-09
 
 ### Task list
 
