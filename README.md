@@ -39,6 +39,16 @@ other modules (2nd Display, C1 Minimal) are untouched.
   every command, so one greyscale picture (9 column commands and a "show it"
   command) was drawn 10 times. Now it's drawn once, and the matrix keeps up
   with apps that send a lot of pictures, like system monitors and games.
+- **Dimming that keeps every shade.** A new command (`0x30`, see
+  [commands.md](commands.md)) dims the matrix by lowering the LED current
+  instead of the pixel values, so dim pictures keep all their grey levels.
+  White Rabbit uses it when "Keep every shade when dim" is on.
+- **No redrawing a still picture.** The firmware used to send the picture to
+  the LED controller 32 times a second even when nothing changed. Now it only
+  does that while an animation, scrolling or a game is running.
+- **One-second sleep fade.** Going to sleep and waking up fade in about a
+  second at any brightness (it used to take up to 5 seconds at full
+  brightness).
 - **Built on Framework's official 0.2.0 firmware.** Framework's newer,
   unreleased code updates the USB and LED libraries, and with it the matrix
   flickers when a system monitor app keeps updating it. This fork's firmware

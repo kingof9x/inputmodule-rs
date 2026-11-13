@@ -48,6 +48,20 @@ pub struct LedmatrixState {
     /// - No automatic sleeping
     pub debug_mode: bool,
     pub upcoming_frames: Option<Animation>,
+    /// How much current the LEDs get, 0-255 of `max_scaling` (GlobalCurrent command)
+    pub global_current: u8,
+    /// The most current (LED scaling) this board allows. Never exceeded.
+    pub max_scaling: u8,
+}
+
+/// The LED controller's scaling for the current global_current setting, never above max_scaling
+pub fn led_scaling(state: &LedmatrixState) -> u8 {
+    let scaling = (state.global_current as u16 * state.max_scaling as u16) / 255;
+    if state.global_current > 0 && scaling == 0 {
+        1
+    } else {
+        scaling as u8
+    }
 }
 
 #[allow(clippy::large_enum_variant)]

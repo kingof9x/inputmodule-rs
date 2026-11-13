@@ -239,6 +239,8 @@ fn main() -> ! {
         pwm_freq: PwmFreqArg::P29k,
         debug_mode: false,
         upcoming_frames: None,
+        global_current: 255,
+        max_scaling: MAX_BRIGHTNESS,
     };
     state.debug_mode = dip1.is_low().unwrap();
     if show_startup_animation(&state) {
@@ -270,7 +272,7 @@ fn main() -> ! {
         .unwrap();
 
     matrix
-        .set_scaling(MAX_BRIGHTNESS)
+        .set_scaling(led_scaling(&state))
         .expect("failed to set scaling");
 
     matrix.device.set_pwm_freq(state.pwm_freq.into()).unwrap();
@@ -370,7 +372,12 @@ fn main() -> ! {
 
         // Handle period display updates. Don't do it too often
         let render_again = timer.get_counter().ticks() > animation_timer + state.animation_period;
-        if matches!(state.sleeping, SleepState::Awake) && render_again {
+        // Only redraw when the picture changes by itself (an animation, scrolling or a game).
+        // Commands redraw the LEDs themselves, so a still picture isn't sent to the LED
+        // controller 32 times a second for nothing.
+        let changes_by_itself =
+            state.upcoming_frames.is_some() || state.animate || state.game.is_some();
+        if matches!(state.sleeping, SleepState::Awake) && render_again && changes_by_itself {
             if let Some(ref mut upcoming) = state.upcoming_frames {
                 if let Some(next_frame) = upcoming.next() {
                     state.grid = next_frame;
@@ -594,6 +601,11 @@ fn assign_sleep_reason(
 }
 
 // Will do nothing if already in the right state
+/// Brightness change per 100 ms step, so a sleep or wake fade takes about a second
+fn fade_step(brightness: u8) -> u8 {
+    core::cmp::max(1, brightness / 10)
+}
+
 fn handle_sleep(
     sleep_reason: Option<SleepReason>,
     state: &mut LedmatrixState,
@@ -607,11 +619,13 @@ fn handle_sleep(
         (SleepState::Awake, Some(sleep_reason)) => {
             state.sleeping = SleepState::Sleeping((state.grid.clone(), state.brightness));
             // Slowly decrease brightness
+            // Fade out in about a second (10 steps), however bright it is
             if dyn_sleep_mode(state) == SleepMode::Fading {
                 let mut brightness = state.brightness;
+                let step = fade_step(brightness);
                 loop {
                     delay.delay_ms(100);
-                    brightness = if brightness <= 5 { 0 } else { brightness - 5 };
+                    brightness = brightness.saturating_sub(step);
                     set_brightness(state, brightness, matrix);
                     if brightness == 0 {
                         break;
@@ -651,14 +665,16 @@ fn handle_sleep(
             }
 
             // Slowly increase brightness
+            // Fade in in about a second (10 steps)
             if dyn_sleep_mode(state) == SleepMode::Fading {
-                let mut brightness = 0;
+                let mut brightness: u8 = 0;
+                let step = fade_step(old_brightness);
                 loop {
                     delay.delay_ms(100);
-                    brightness = if brightness >= old_brightness - 5 {
+                    brightness = if brightness >= old_brightness.saturating_sub(step) {
                         old_brightness
                     } else {
-                        brightness + 5
+                        brightness + step
                     };
                     set_brightness(state, brightness, matrix);
                     if brightness == old_brightness {
