@@ -74,6 +74,9 @@ pub enum CommandVals {
     DebugMode = 0x1F,
     Version = 0x20,
     StartupAnimation = 0x21,
+    /// Dim the LEDs by lowering the current they get, instead of their brightness values, so dim
+    /// pictures keep all their shades. 0-255, 255 being the most current the firmware allows.
+    GlobalCurrent = 0x30,
 }
 
 #[derive(num_derive::FromPrimitive)]
@@ -230,6 +233,10 @@ pub enum Command {
     #[cfg(feature = "ledmatrix")]
     SetStartupAnimation(StartupAnimationConfig),
     GetStartupAnimation,
+    /// Set how much current the LEDs get (0-255 of the most the firmware allows)
+    #[cfg(feature = "ledmatrix")]
+    SetGlobalCurrent(u8),
+    GetGlobalCurrent,
     _Unknown,
 }
 
@@ -432,6 +439,11 @@ pub fn parse_module_command(count: usize, buf: &[u8]) -> Option<Command> {
                     Some(Command::GetStartupAnimation)
                 }
             }
+            Some(CommandVals::GlobalCurrent) => Some(if let Some(current) = arg {
+                Command::SetGlobalCurrent(current)
+            } else {
+                Command::GetGlobalCurrent
+            }),
             _ => None,
         }
     } else {
@@ -679,6 +691,16 @@ pub fn handle_command(
         Command::GetStartupAnimation => {
             let mut response: [u8; 32] = [0; 32];
             response[0..6].copy_from_slice(&load_startup_config().to_bytes());
+            Some(response)
+        }
+        Command::SetGlobalCurrent(current) => {
+            state.global_current = *current;
+            let _ = matrix.set_scaling(led_scaling(state));
+            None
+        }
+        Command::GetGlobalCurrent => {
+            let mut response: [u8; 32] = [0; 32];
+            response[0] = state.global_current;
             Some(response)
         }
         _ => handle_generic_command(command),

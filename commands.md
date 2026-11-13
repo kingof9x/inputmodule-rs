@@ -59,6 +59,8 @@ When no parameters are given, the current value is queried and returned.
 | Version      | 0x20 |   `LDM` |  3 Bytes |            | Get firmware version     |
 | StartupAnim  | 0x21 |   `L  ` |          |  3/5 Bytes | Save startup animation   |
 | GetStartupAn | 0x21 |   `L  ` |  5 Bytes |            | Get startup animation    |
+| GlobalCurrent| 0x30 |   `L  ` |          |     1 Byte | Dim by lowering current  |
+| GetGlobalCur | 0x30 |   `L  ` |   1 Byte |            | Get the current setting  |
 
 #### Pattern (0x01)
 
@@ -107,6 +109,18 @@ Byte 2: 1 if pre-release version, 0 otherwise
 |        |   |           |   0 otherwise
 MMMMMMMM mmmmPPPP 0000000p
 ```
+
+#### GlobalCurrent (0x30)
+
+Dims the LEDs by lowering how much current they get, instead of lowering
+their brightness values. Brightness (0x00) scales every pixel value down, so at
+low brightness many grey levels end up the same; with GlobalCurrent the pixels
+keep all 256 levels and the whole panel is dimmer.
+
+Parameter: 0-255, where 255 (the default after power on) is the most current
+the firmware allows for this board. It never goes above that limit. Without a
+parameter, returns the current setting in 1 byte. Not saved; set it again
+after the module restarts.
 
 #### StartupAnimation (0x21)
 
