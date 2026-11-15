@@ -673,3 +673,100 @@ impl Iterator for CampfireIterator {
         None
     }
 }
+
+/// Pixel rain: the rabbit floats up into place pixel by pixel, sits for a moment, then crumbles and
+/// falls away like sand.
+pub struct PixelRainIterator {
+    frame: u32,
+    /// Per LED: when it lands (frames), when it lets go (frames) and how far it drifts sideways
+    land: [[u8; HEIGHT]; WIDTH],
+    drop: [[u8; HEIGHT]; WIDTH],
+    drift: [[i8; HEIGHT]; WIDTH],
+    picture: Grid,
+}
+
+const PIXEL_RAIN_RABBIT_TOP: i32 = 11;
+/// Rows the ground is drawn on, under the rabbit
+const PIXEL_RAIN_GROUND: usize = 22;
+/// Frames for: floating up, sitting, falling away, dark
+const PIXEL_RAIN_PHASES: [u32; 4] = [56, 36, 76, 6];
+
+impl PixelRainIterator {
+    pub fn new(seed: u8) -> Self {
+        let mut rng = Rng::new(seed);
+        let mut picture = Grid::default();
+        stamp_rabbit(&mut picture, 1, PIXEL_RAIN_RABBIT_TOP, 230, HEIGHT as i32);
+        for x in 0..WIDTH {
+            picture.0[x][PIXEL_RAIN_GROUND] = 120;
+            if x % 2 == 0 {
+                picture.0[x][PIXEL_RAIN_GROUND + 1] = 60;
+            }
+        }
+        let mut land = [[0; HEIGHT]; WIDTH];
+        let mut drop = [[0; HEIGHT]; WIDTH];
+        let mut drift = [[0; HEIGHT]; WIDTH];
+        for x in 0..WIDTH {
+            for y in 0..HEIGHT {
+                // The top lands first; the bottom lets go first
+                land[x][y] = (22 + y * 22 / (HEIGHT - 1)) as u8 + rng.below(9) as u8;
+                drop[x][y] = ((HEIGHT - 1 - y) * 22 / (HEIGHT - 1)) as u8 + rng.below(10) as u8;
+                drift[x][y] = rng.below(9) as i8 - 4;
+            }
+        }
+        Self {
+            frame: 0,
+            land,
+            drop,
+            drift,
+            picture,
+        }
+    }
+
+    /// The picture with each LED `a` frames away from its place (falling down, or floating up
+    /// before it lands), in 1/256 LEDs: y + 70 LEDs/s^2 at 32 frames per second.
+    fn draw(&self, away: impl Fn(usize, usize) -> i32) -> Grid {
+        let mut grid = Grid::default();
+        for x in 0..WIDTH {
+            for y in 0..HEIGHT {
+                let v = self.picture.0[x][y];
+                if v == 0 {
+                    continue;
+                }
+                let a = away(x, y);
+                let fy = y as i32 * 256 + 128 + a * a * 35 / 4;
+                let fx = x as i32 * 256 + 128 + self.drift[x][y] as i32 * a * 5;
+                let (gx, gy) = (fx >> 8, fy >> 8);
+                if (0..WIDTH as i32).contains(&gx) && (0..HEIGHT as i32).contains(&gy) {
+                    let led = &mut grid.0[gx as usize][gy as usize];
+                    *led = (*led).max(v);
+                }
+            }
+        }
+        grid
+    }
+}
+
+impl Iterator for PixelRainIterator {
+    type Item = Grid;
+
+    fn next(&mut self) -> Option<Grid> {
+        let [rise, sit, fall, dark] = PIXEL_RAIN_PHASES;
+        let t = self.frame;
+        self.frame += 1;
+        if t < rise {
+            return Some(self.draw(|x, y| (self.land[x][y] as i32 - t as i32).max(0)));
+        }
+        let t = t - rise;
+        if t < sit {
+            return Some(self.picture.clone());
+        }
+        let t = t - sit;
+        if t < fall {
+            return Some(self.draw(|x, y| (t as i32 - self.drop[x][y] as i32).max(0)));
+        }
+        if t - fall < dark {
+            return Some(Grid::default());
+        }
+        None
+    }
+}

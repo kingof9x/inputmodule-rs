@@ -31,10 +31,11 @@ other modules (2nd Display, C1 Minimal) are untouched.
   they start with the whole matrix filled with a dotted texture that breaks
   into chaos and settles after about 2 minutes. Also in the Games tab and the
   startup animation list.
-- **6 new startup animations made for White Rabbit:** Rabbit hole (a rabbit
+- **7 new startup animations made for White Rabbit:** Rabbit hole (a rabbit
   hops down and dives into a hole), Digital rain (code rain that leaves a
-  rabbit behind), Hourglass, Warp speed, Power on (an old TV switching on) and
-  Campfire. Each plays for 4 to 6 seconds.
+  rabbit behind), Hourglass, Warp speed, Power on (an old TV switching on),
+  Campfire and Pixel rain (a rabbit floats up into place, then crumbles away).
+  Each plays for 4 to 6 seconds.
 - **Faster greyscale pictures.** The firmware used to redraw all LEDs after
   every command, so one greyscale picture (9 column commands and a "show it"
   command) was drawn 10 times. Now it's drawn once, and the matrix keeps up

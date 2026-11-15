@@ -70,6 +70,7 @@ STARTUP_ANIMATIONS = [
     "Warp speed",
     "Power on",
     "Campfire",
+    "Pixel rain",
 ]
 # Names for the command line
 STARTUP_ANIMATION_NAMES = [
@@ -101,6 +102,7 @@ STARTUP_ANIMATION_NAMES = [
     "warp-speed",
     "power-on",
     "campfire",
+    "pixel-rain",
 ]
 ALL_STARTUP_ANIMATIONS = (1 << len(STARTUP_ANIMATIONS)) - 1
 
