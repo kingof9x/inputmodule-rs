@@ -26,6 +26,7 @@ pub enum Animation {
     WarpSpeed(WarpSpeedIterator),
     PowerOn(PowerOnIterator),
     Campfire(CampfireIterator),
+    PixelRain(PixelRainIterator),
 }
 impl Iterator for Animation {
     type Item = Grid;
@@ -44,6 +45,7 @@ impl Iterator for Animation {
             Animation::WarpSpeed(x) => x.next(),
             Animation::PowerOn(x) => x.next(),
             Animation::Campfire(x) => x.next(),
+            Animation::PixelRain(x) => x.next(),
         }
     }
 }

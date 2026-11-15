@@ -20,7 +20,7 @@ const MAGIC: [u8; 4] = *b"FWST";
 const RECORD_VERSION: u8 = 3;
 
 /// Number of built-in startup animations
-pub const STARTUP_ANIMATION_COUNT: u8 = 28;
+pub const STARTUP_ANIMATION_COUNT: u8 = 29;
 const ALL_ANIMATIONS: u32 = (1 << STARTUP_ANIMATION_COUNT) - 1;
 
 #[derive(Copy, Clone, PartialEq, Eq, num_derive::FromPrimitive)]
@@ -133,6 +133,7 @@ pub fn startup_animation(index: u8, seed: u8) -> Animation {
         25 => Animation::WarpSpeed(WarpSpeedIterator::new(seed)),
         26 => Animation::PowerOn(PowerOnIterator::default()),
         27 => Animation::Campfire(CampfireIterator::new(seed)),
+        28 => Animation::PixelRain(PixelRainIterator::new(seed)),
         _ => {
             let pattern = match index {
                 8 => GameOfLifeStartParam::RPentomino,

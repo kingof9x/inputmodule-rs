@@ -174,3 +174,4 @@ Animations:
 - 0x19 - Warp speed (stars rush out, then a white flash)
 - 0x1A - Power on (an old TV switching on)
 - 0x1B - Campfire (flames grow and die down to embers)
+- 0x1C - Pixel rain (a rabbit floats up into place, then crumbles away like sand)
