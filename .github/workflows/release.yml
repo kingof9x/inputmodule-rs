@@ -40,6 +40,10 @@ jobs:
       - run: cargo +stable install elf2uf2-rs
 
       - run: cargo make --cwd ledmatrix uf2
+        env:
+          # The firmware reports this as its build number, so White Rabbit can tell which
+          # release a panel has (matches the build-N tag below)
+          WR_FIRMWARE_BUILD: ${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:

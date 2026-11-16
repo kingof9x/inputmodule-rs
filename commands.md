@@ -110,6 +110,18 @@ Byte 2: 1 if pre-release version, 0 otherwise
 MMMMMMMM mmmmPPPP 0000000p
 ```
 
+White Rabbit firmware (this fork) adds:
+
+```plain
+Byte 3-4: "WR" (0x57 0x52). Framework's official firmware leaves these 0.
+Byte 5-6: White Rabbit build number, little endian. It is the N of the
+          `build-N` release the firmware came from, 0 when built by hand.
+```
+
+The same build number is kept in the firmware image as the 10 bytes
+`WRFW-BUILD` followed by the number (2 bytes, little endian), so an app can
+read it out of a `.uf2` file before flashing it.
+
 #### GlobalCurrent (0x30)
 
 Dims the LEDs by lowering how much current they get, instead of lowering
