@@ -53,3 +53,55 @@ pub fn device_release() -> u16 {
 pub fn is_pre_release() -> bool {
     !env!("CARGO_PKG_VERSION_PRE").is_empty()
 }
+
+/// White Rabbit build number: the N of the `build-N` release this firmware was built for, set by the
+/// release workflow through the `WR_FIRMWARE_BUILD` environment variable. 0 when built by hand.
+pub const WR_BUILD: u16 = parse_build(option_env!("WR_FIRMWARE_BUILD"));
+
+const fn parse_build(text: Option<&str>) -> u16 {
+    let bytes = match text {
+        Some(t) => t.as_bytes(),
+        None => return 0,
+    };
+    let mut n: u32 = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b < b'0' || b > b'9' {
+            return 0;
+        }
+        n = n * 10 + (b - b'0') as u32;
+        if n > u16::MAX as u32 {
+            return 0;
+        }
+        i += 1;
+    }
+    n as u16
+}
+
+const WR_TAG_PREFIX: &[u8; 10] = b"WRFW-BUILD";
+
+const fn wr_build_tag() -> [u8; 12] {
+    let mut tag = [0u8; 12];
+    let mut i = 0;
+    while i < WR_TAG_PREFIX.len() {
+        tag[i] = WR_TAG_PREFIX[i];
+        i += 1;
+    }
+    let n = WR_BUILD.to_le_bytes();
+    tag[10] = n[0];
+    tag[11] = n[1];
+    tag
+}
+
+/// "WRFW-BUILD" and the build number (little endian), kept in flash so an app can read the build
+/// number out of a .uf2 file before flashing it.
+#[used]
+pub static WR_BUILD_TAG: [u8; 12] = wr_build_tag();
+
+/// The build number, read through the tag so the tag stays in the firmware image.
+pub fn wr_build() -> u16 {
+    // Safety: reading a static that is always initialised
+    let tag = unsafe { core::ptr::read_volatile(&WR_BUILD_TAG) };
+    u16::from_le_bytes([tag[10], tag[11]])
+}

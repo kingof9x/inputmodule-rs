@@ -2,7 +2,7 @@
 use num::FromPrimitive;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 
-use crate::serialnum::{device_release, is_pre_release};
+use crate::serialnum::{device_release, is_pre_release, wr_build};
 
 #[cfg(feature = "b1display")]
 use crate::graphics::*;
@@ -552,6 +552,11 @@ pub fn handle_generic_command(command: &Command) -> Option<[u8; 32]> {
             response[0] = bcd_device[0];
             response[1] = bcd_device[1];
             response[2] = is_pre_release() as u8;
+            // White Rabbit firmware: "WR" and the build number, so apps can tell it apart from
+            // Framework's official firmware (which leaves these bytes 0)
+            response[3] = b'W';
+            response[4] = b'R';
+            response[5..7].copy_from_slice(&wr_build().to_le_bytes());
             Some(response)
         }
         _ => None,
