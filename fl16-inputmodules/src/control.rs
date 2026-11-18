@@ -425,14 +425,16 @@ pub fn parse_module_command(count: usize, buf: &[u8]) -> Option<Command> {
             Some(CommandVals::StartupAnimation) => {
                 if count == 3 + 3 {
                     // Older tools only send the first 8 bits of the set
-                    StartupAnimationConfig::from_args(buf[3], buf[4], buf[5] as u32)
+                    StartupAnimationConfig::from_args(buf[3], buf[4], buf[5] as u64)
                         .map(Command::SetStartupAnimation)
                 } else if count == 3 + 5 {
-                    let set = u32::from_le_bytes([buf[5], buf[6], buf[7], 0]);
+                    let set = u64::from_le_bytes([buf[5], buf[6], buf[7], 0, 0, 0, 0, 0]);
                     StartupAnimationConfig::from_args(buf[3], buf[4], set)
                         .map(Command::SetStartupAnimation)
-                } else if count == 3 + 6 {
-                    let set = u32::from_le_bytes([buf[5], buf[6], buf[7], buf[8]]);
+                } else if count == 3 + 6 || count == 3 + 7 {
+                    // 4 or 5 bytes of the set
+                    let fifth = if count == 3 + 7 { buf[9] } else { 0 };
+                    let set = u64::from_le_bytes([buf[5], buf[6], buf[7], buf[8], fifth, 0, 0, 0]);
                     StartupAnimationConfig::from_args(buf[3], buf[4], set)
                         .map(Command::SetStartupAnimation)
                 } else {
@@ -695,7 +697,7 @@ pub fn handle_command(
         }
         Command::GetStartupAnimation => {
             let mut response: [u8; 32] = [0; 32];
-            response[0..6].copy_from_slice(&load_startup_config().to_bytes());
+            response[0..7].copy_from_slice(&load_startup_config().to_bytes());
             Some(response)
         }
         Command::SetGlobalCurrent(current) => {

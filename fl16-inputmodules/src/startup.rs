@@ -16,12 +16,13 @@ const SECTOR_SIZE: u32 = 0x1000;
 /// Smallest amount of flash that can be programmed at once
 const PAGE_SIZE: usize = 256;
 const MAGIC: [u8; 4] = *b"FWST";
-/// Version 1 stored the set of animations in 1 byte, version 2 in 3 bytes, version 3 in 4 bytes
-const RECORD_VERSION: u8 = 3;
+/// Version 1 stored the set of animations in 1 byte, version 2 in 3 bytes, version 3 in 4 bytes,
+/// version 4 in 5 bytes
+const RECORD_VERSION: u8 = 4;
 
 /// Number of built-in startup animations
-pub const STARTUP_ANIMATION_COUNT: u8 = 29;
-const ALL_ANIMATIONS: u32 = (1 << STARTUP_ANIMATION_COUNT) - 1;
+pub const STARTUP_ANIMATION_COUNT: u8 = 34;
+const ALL_ANIMATIONS: u64 = (1 << STARTUP_ANIMATION_COUNT) - 1;
 
 #[derive(Copy, Clone, PartialEq, Eq, num_derive::FromPrimitive)]
 pub enum StartupMode {
@@ -41,7 +42,7 @@ pub struct StartupAnimationConfig {
     /// Animation to show in `Fixed` mode
     pub animation: u8,
     /// Bitmask of animations to choose from in `RandomSet` mode
-    pub set: u32,
+    pub set: u64,
 }
 
 impl Default for StartupAnimationConfig {
@@ -55,7 +56,7 @@ impl Default for StartupAnimationConfig {
 }
 
 impl StartupAnimationConfig {
-    pub fn from_args(mode: u8, animation: u8, set: u32) -> Option<Self> {
+    pub fn from_args(mode: u8, animation: u8, set: u64) -> Option<Self> {
         let set = set & ALL_ANIMATIONS;
         let mode = FromPrimitive::from_u8(mode)?;
         if mode == StartupMode::Fixed && animation >= STARTUP_ANIMATION_COUNT {
@@ -71,8 +72,8 @@ impl StartupAnimationConfig {
         })
     }
 
-    /// Mode, animation and the set of animations as 4 bytes, little endian
-    pub fn to_bytes(self) -> [u8; 6] {
+    /// Mode, animation and the set of animations as 5 bytes, little endian
+    pub fn to_bytes(self) -> [u8; 7] {
         let set = self.set.to_le_bytes();
         [
             self.mode as u8,
@@ -81,6 +82,7 @@ impl StartupAnimationConfig {
             set[1],
             set[2],
             set[3],
+            set[4],
         ]
     }
 
@@ -134,6 +136,11 @@ pub fn startup_animation(index: u8, seed: u8) -> Animation {
         26 => Animation::PowerOn(PowerOnIterator::default()),
         27 => Animation::Campfire(CampfireIterator::new(seed)),
         28 => Animation::PixelRain(PixelRainIterator::new(seed)),
+        29 => Animation::PixelDrop(PixelDropIterator::new(seed)),
+        30 => Animation::PixelSwirl(PixelSwirlIterator::new(seed)),
+        31 => Animation::CodeWall(CodeWallIterator::new(seed)),
+        32 => Animation::WarpRings(WarpRingsIterator::new(seed)),
+        33 => Animation::RabbitHoleRain(RabbitHoleRainIterator::new(seed)),
         _ => {
             let pattern = match index {
                 8 => GameOfLifeStartParam::RPentomino,
@@ -164,7 +171,7 @@ fn checksum(data: &[u8]) -> u32 {
 /// Read the setting from flash. Falls back to the default if nothing valid was saved.
 pub fn load_startup_config() -> StartupAnimationConfig {
     // Flash is mapped into memory, just read it from there
-    let ptr = (FLASH_OFFSET + SETTINGS_BLOCK as usize) as *const [u8; 15];
+    let ptr = (FLASH_OFFSET + SETTINGS_BLOCK as usize) as *const [u8; 16];
     let raw = unsafe { core::ptr::read_volatile(ptr) };
     if raw[0..4] != MAGIC {
         return StartupAnimationConfig::default();
@@ -175,17 +182,19 @@ pub fn load_startup_config() -> StartupAnimationConfig {
         1 => 8,
         2 => 10,
         3 => 11,
+        4 => 12,
         _ => return StartupAnimationConfig::default(),
     };
     let actual_checksum = u32::from_le_bytes([raw[len], raw[len + 1], raw[len + 2], raw[len + 3]]);
     if checksum(&raw[0..len]) != actual_checksum {
         return StartupAnimationConfig::default();
     }
-    let set = u32::from_le_bytes([raw[7], raw[8], raw[9], raw[10]]);
+    let set = u64::from_le_bytes([raw[7], raw[8], raw[9], raw[10], raw[11], 0, 0, 0]);
     // Older versions stored fewer bytes of the set
     let set = match raw[4] {
         1 => set & 0xFF,
         2 => set & 0xFF_FFFF,
+        3 => set & 0xFFFF_FFFF,
         _ => set,
     };
     StartupAnimationConfig::from_args(raw[5], raw[6], set).unwrap_or_default()
@@ -203,9 +212,9 @@ pub fn save_startup_config(config: &StartupAnimationConfig) {
     let mut page = [0xFFu8; PAGE_SIZE];
     page[0..4].copy_from_slice(&MAGIC);
     page[4] = RECORD_VERSION;
-    page[5..11].copy_from_slice(&config.to_bytes());
-    let crc = checksum(&page[0..11]);
-    page[11..15].copy_from_slice(&crc.to_le_bytes());
+    page[5..12].copy_from_slice(&config.to_bytes());
+    let crc = checksum(&page[0..12]);
+    page[12..16].copy_from_slice(&crc.to_le_bytes());
 
     // Nothing may read from flash while it's being written.
     // The second core is never started, so it's still waiting in ROM.

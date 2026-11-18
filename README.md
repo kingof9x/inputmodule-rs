@@ -34,7 +34,8 @@ other modules (2nd Display, C1 Minimal) are untouched.
 - **7 new startup animations made for White Rabbit:** Rabbit hole (a rabbit
   hops down and dives into a hole), Digital rain (code rain that leaves a
   rabbit behind), Hourglass, Warp speed, Power on (an old TV switching on),
-  Campfire and Pixel rain (a rabbit floats up into place, then crumbles away).
+  Campfire, Pixel rain (a rabbit floats up into place, then crumbles away), Pixel drop,
+  Pixel swirl, Code wall, Warp rings and Rabbit hole rain.
   Each plays for 4 to 6 seconds.
 - **Faster greyscale pictures.** The firmware used to redraw all LEDs after
   every command, so one greyscale picture (9 column commands and a "show it"

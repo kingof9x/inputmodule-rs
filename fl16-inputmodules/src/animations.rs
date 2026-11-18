@@ -27,6 +27,11 @@ pub enum Animation {
     PowerOn(PowerOnIterator),
     Campfire(CampfireIterator),
     PixelRain(PixelRainIterator),
+    PixelDrop(PixelDropIterator),
+    PixelSwirl(PixelSwirlIterator),
+    CodeWall(CodeWallIterator),
+    WarpRings(WarpRingsIterator),
+    RabbitHoleRain(RabbitHoleRainIterator),
 }
 impl Iterator for Animation {
     type Item = Grid;
@@ -46,6 +51,11 @@ impl Iterator for Animation {
             Animation::PowerOn(x) => x.next(),
             Animation::Campfire(x) => x.next(),
             Animation::PixelRain(x) => x.next(),
+            Animation::PixelDrop(x) => x.next(),
+            Animation::PixelSwirl(x) => x.next(),
+            Animation::CodeWall(x) => x.next(),
+            Animation::WarpRings(x) => x.next(),
+            Animation::RabbitHoleRain(x) => x.next(),
         }
     }
 }
