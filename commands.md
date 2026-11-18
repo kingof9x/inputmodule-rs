@@ -57,8 +57,8 @@ When no parameters are given, the current value is queried and returned.
 | SetPxCol     | 0x16 |   ` D ` |          |   50 Bytes | Send a column of pixels  |
 | FlushFB      | 0x17 |   ` D ` |          |            | Flush all columns        |
 | Version      | 0x20 |   `LDM` |  3 Bytes |            | Get firmware version     |
-| StartupAnim  | 0x21 |   `L  ` |          |  3/5 Bytes | Save startup animation   |
-| GetStartupAn | 0x21 |   `L  ` |  5 Bytes |            | Get startup animation    |
+| StartupAnim  | 0x21 |   `L  ` |          |  3-7 Bytes | Save startup animation   |
+| GetStartupAn | 0x21 |   `L  ` |  7 Bytes |            | Get startup animation    |
 | GlobalCurrent| 0x30 |   `L  ` |          |     1 Byte | Dim by lowering current  |
 | GetGlobalCur | 0x30 |   `L  ` |   1 Byte |            | Get the current setting  |
 
@@ -149,12 +149,12 @@ Byte 0: Mode
         0x02 - Random animation, out of a set (see byte 2)
         0x03 - No animation
 Byte 1: Animation, for mode 0x01
-Byte 2-5: Bitmask of animations, for mode 0x02, little endian.
+Byte 2-6: Bitmask of animations, for mode 0x02, little endian.
           Bit 0 is animation 0x00.
 ```
 
-The bitmask may also be sent as 1 or 3 bytes. With 1 byte only the first 8
-animations can be picked, with 3 bytes the first 24.
+The bitmask may also be sent as 1, 3 or 4 bytes. With 1 byte only the first 8
+animations can be picked, with 3 bytes the first 24, with 4 bytes the first 32.
 
 Animations:
 
@@ -187,3 +187,8 @@ Animations:
 - 0x1A - Power on (an old TV switching on)
 - 0x1B - Campfire (flames grow and die down to embers)
 - 0x1C - Pixel rain (a rabbit floats up into place, then crumbles away like sand)
+- 0x1D - Pixel drop (pixels fall in and fill the panel, then float away)
+- 0x1E - Pixel swirl (pixels spiral in to make diamond rings, then spiral out)
+- 0x1F - Code wall (code rain builds a wall of code, then melts away)
+- 0x20 - Warp rings (pixels streak in to make rings, then a warp and a white flash)
+- 0x21 - Rabbit hole rain (a rabbit floats up into place, then hops into a hole)

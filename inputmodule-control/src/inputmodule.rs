@@ -515,7 +515,16 @@ fn startup_animation_cmd(serialdev: &str, arg: Option<StartupAnimation>) {
             0x00 => println!("Startup animation: Random"),
             0x01 => println!("Startup animation: {}", name(response[1])),
             0x02 => {
-                let mask = u32::from_le_bytes([response[2], response[3], response[4], response[5]]);
+                let mask = u64::from_le_bytes([
+                    response[2],
+                    response[3],
+                    response[4],
+                    response[5],
+                    response[6],
+                    0,
+                    0,
+                    0,
+                ]);
                 let set: Vec<String> = (0..StartupAnimation::ANIMATIONS.len() as u8)
                     .filter(|i| mask & (1 << i) != 0)
                     .map(name)
@@ -529,7 +538,7 @@ fn startup_animation_cmd(serialdev: &str, arg: Option<StartupAnimation>) {
 }
 
 fn startup_animation_set_cmd(serialdev: &str, set: &[StartupAnimation]) {
-    let mut mask: u32 = 0;
+    let mut mask: u64 = 0;
     for animation in set {
         let Some(id) = animation.id() else {
             panic!("{animation:?} can't be part of the set");
@@ -537,9 +546,15 @@ fn startup_animation_set_cmd(serialdev: &str, set: &[StartupAnimation]) {
         mask |= 1 << id;
     }
     let mask = mask.to_le_bytes();
-    // Only send the 4th byte when needed, older firmware only understands 3
-    let args = [0x02, 0, mask[0], mask[1], mask[2], mask[3]];
-    let len = if mask[3] == 0 { 5 } else { 6 };
+    // Only send the 4th and 5th bytes when needed, older firmware only understands 3
+    let args = [0x02, 0, mask[0], mask[1], mask[2], mask[3], mask[4]];
+    let len = if mask[4] != 0 {
+        7
+    } else if mask[3] != 0 {
+        6
+    } else {
+        5
+    };
     simple_cmd(serialdev, Command::StartupAnimation, &args[..len]);
 }
 

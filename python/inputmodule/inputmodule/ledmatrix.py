@@ -71,6 +71,11 @@ STARTUP_ANIMATIONS = [
     "Power on",
     "Campfire",
     "Pixel rain",
+    "Pixel drop",
+    "Pixel swirl",
+    "Code wall",
+    "Warp rings",
+    "Rabbit hole rain",
 ]
 # Names for the command line
 STARTUP_ANIMATION_NAMES = [
@@ -103,6 +108,11 @@ STARTUP_ANIMATION_NAMES = [
     "power-on",
     "campfire",
     "pixel-rain",
+    "pixel-drop",
+    "pixel-swirl",
+    "code-wall",
+    "warp-rings",
+    "rabbit-hole-rain",
 ]
 ALL_STARTUP_ANIMATIONS = (1 << len(STARTUP_ANIMATIONS)) - 1
 
@@ -148,10 +158,12 @@ def set_startup_animation(dev, mode, animation=0, animation_set=ALL_STARTUP_ANIM
     animation is the index in STARTUP_ANIMATIONS, used in Fixed mode.
     animation_set is a bitmask of animations, used in RandomSet mode.
     The chosen animation plays once right away."""
-    # Older firmware only understands 3 bytes of the set, so the 4th one (the newest
-    # animations) is only sent when it matters, and then the firmware must be new anyway
-    if mode == StartupMode.RandomSet and animation_set >> 24:
-        mask = list(animation_set.to_bytes(4, "little"))
+    # Older firmware only understands 3 bytes of the set, so the 4th and 5th ones (the newest
+    # animations) are only sent when they matter, and then the firmware must be new anyway
+    if mode == StartupMode.RandomSet and animation_set >> 32:
+        mask = list(animation_set.to_bytes(5, "little"))
+    elif mode == StartupMode.RandomSet and animation_set >> 24:
+        mask = list((animation_set & 0xFFFFFFFF).to_bytes(4, "little"))
     else:
         mask = list((animation_set & 0xFFFFFF).to_bytes(3, "little"))
     send_command(dev, CommandVals.StartupAnimation, [mode, animation] + mask)
@@ -175,8 +187,8 @@ def get_startup_animation(dev):
         mode = StartupMode(res[0])
     except ValueError:
         return None
-    # Older firmware sends 3 bytes of the set and a 0 after them
-    animation_set = int.from_bytes(res[2:6], "little")
+    # Older firmware sends 3 or 4 bytes of the set and 0s after them
+    animation_set = int.from_bytes(res[2:7], "little")
     return (mode, res[1], animation_set)
 
 

@@ -770,3 +770,536 @@ impl Iterator for PixelRainIterator {
         None
     }
 }
+
+// Round 2: Pixel drop, Pixel swirl, Code wall, Warp rings and Rabbit hole rain. Each one moves the
+// LEDs of a picture around, with their own timing and a little sideways drift.
+
+/// Light one LED at (fx, fy), given in 1/256 LEDs. Off-panel positions are left out.
+fn plot(grid: &mut Grid, fx: i32, fy: i32, v: u8) {
+    let (gx, gy) = (fx >> 8, fy >> 8);
+    if (0..WIDTH as i32).contains(&gx) && (0..HEIGHT as i32).contains(&gy) {
+        let led = &mut grid.0[gx as usize][gy as usize];
+        *led = (*led).max(v);
+    }
+}
+
+/// Make each LED of `grid` at least as bright as in `other`
+fn max_into(grid: &mut Grid, other: &Grid) {
+    for x in 0..WIDTH {
+        for y in 0..HEIGHT {
+            grid.0[x][y] = grid.0[x][y].max(other.0[x][y]);
+        }
+    }
+}
+
+/// Every lit LED of `picture` moved by `offset(x, y)`, given in 1/256 LEDs
+fn moved(picture: &Grid, offset: impl Fn(usize, usize) -> (i32, i32)) -> Grid {
+    let mut grid = Grid::default();
+    for x in 0..WIDTH {
+        for y in 0..HEIGHT {
+            let v = picture.0[x][y];
+            if v == 0 {
+                continue;
+            }
+            let (dx, dy) = offset(x, y);
+            plot(
+                &mut grid,
+                x as i32 * 256 + 128 + dx,
+                y as i32 * 256 + 128 + dy,
+                v,
+            );
+        }
+    }
+    grid
+}
+
+/// Per LED: when it arrives, when it leaves (both in frames) and how far it drifts sideways
+struct Timings {
+    arrive: [[u8; HEIGHT]; WIDTH],
+    leave: [[u8; HEIGHT]; WIDTH],
+    drift: [[i8; HEIGHT]; WIDTH],
+}
+
+impl Timings {
+    fn new(
+        rng: &mut Rng,
+        arrive: impl Fn(usize, usize, &mut Rng) -> u32,
+        leave: impl Fn(usize, usize, &mut Rng) -> u32,
+    ) -> Self {
+        let mut t = Timings {
+            arrive: [[0; HEIGHT]; WIDTH],
+            leave: [[0; HEIGHT]; WIDTH],
+            drift: [[0; HEIGHT]; WIDTH],
+        };
+        for x in 0..WIDTH {
+            for y in 0..HEIGHT {
+                t.arrive[x][y] = arrive(x, y, rng) as u8;
+                t.leave[x][y] = leave(x, y, rng) as u8;
+                t.drift[x][y] = rng.below(9) as i8 - 4;
+            }
+        }
+        t
+    }
+}
+
+/// A random direction for each LED, as an index into SINE
+fn directions(rng: &mut Rng) -> [[u8; HEIGHT]; WIDTH] {
+    let mut angle = [[0; HEIGHT]; WIDTH];
+    for col in angle.iter_mut() {
+        for a in col.iter_mut() {
+            *a = rng.below(32) as u8;
+        }
+    }
+    angle
+}
+
+/// Diamond rings around the middle of the panel, brightest in the middle
+fn rings_picture() -> Grid {
+    let mut grid = Grid::default();
+    for x in 0..WIDTH {
+        for y in 0..HEIGHT {
+            let d = (2 * x as i32 - 8).abs() * 2 + (2 * y as i32 - 33).abs();
+            if (d / 2) % 6 < 2 && d < 40 {
+                grid.0[x][y] = (240 - d * 3) as u8;
+            }
+        }
+    }
+    grid
+}
+
+/// Pixel drop: Pixel rain the other way up, filling the whole panel. Pixels fall in from the top,
+/// the bottom fills first and each one bounces as it lands. Then they float up and away.
+pub struct PixelDropIterator {
+    frame: u32,
+    t: Timings,
+}
+
+impl PixelDropIterator {
+    pub fn new(seed: u8) -> Self {
+        let mut rng = Rng::new(seed);
+        let t = Timings::new(
+            &mut rng,
+            |_, y, r| 16 + (HEIGHT - 1 - y) as u32 * 30 / 33 + r.below(10),
+            |_, y, r| y as u32 * 24 / 33 + r.below(10),
+        );
+        Self { frame: 0, t }
+    }
+
+    fn picture() -> Grid {
+        // Dim at the top, bright at the bottom
+        let mut grid = Grid::default();
+        for col in grid.0.iter_mut() {
+            for (y, led) in col.iter_mut().enumerate() {
+                *led = (50 + y * 180 / (HEIGHT - 1)) as u8;
+            }
+        }
+        grid
+    }
+}
+
+impl Iterator for PixelDropIterator {
+    type Item = Grid;
+
+    fn next(&mut self) -> Option<Grid> {
+        // Fall in: 62 frames, sit: 30, float away: 70, dark: 6
+        let t = self.frame as i32;
+        self.frame += 1;
+        let tm = &self.t;
+        if t < 62 {
+            return Some(moved(&Self::picture(), |x, y| {
+                let a = tm.arrive[x][y] as i32 - t;
+                if a >= 0 {
+                    (tm.drift[x][y] as i32 * a * 3, -a * a * 35 / 4)
+                } else {
+                    // A small bounce, 6 frames long
+                    let b = -a;
+                    (0, if b < 6 { -b * (6 - b) * 14 } else { 0 })
+                }
+            }));
+        }
+        let t = t - 62;
+        if t < 30 {
+            return Some(Self::picture());
+        }
+        let t = t - 30;
+        if t < 70 {
+            return Some(moved(&Self::picture(), |x, y| {
+                let a = (t - tm.leave[x][y] as i32).max(0);
+                (tm.drift[x][y] as i32 * a * 4, -a * a * 6)
+            }));
+        }
+        if t < 76 {
+            return Some(Grid::default());
+        }
+        None
+    }
+}
+
+/// Pixel swirl: pixels spiral in from all around and settle into diamond rings, then spiral back
+/// out the other way.
+pub struct PixelSwirlIterator {
+    frame: u32,
+    t: Timings,
+    angle: [[u8; HEIGHT]; WIDTH],
+}
+
+impl PixelSwirlIterator {
+    pub fn new(seed: u8) -> Self {
+        let mut rng = Rng::new(seed);
+        let t = Timings::new(&mut rng, |_, _, r| 18 + r.below(40), |_, _, r| r.below(34));
+        let angle = directions(&mut rng);
+        Self { frame: 0, t, angle }
+    }
+
+    /// Where an LED is `a` frames before it lands (or after it leaves)
+    fn spiral(&self, x: usize, y: usize, a: i32, turn: i32) -> (i32, i32) {
+        // The distance shrinks to 0 as `a` gets to 0, turning round as it goes
+        let r = a * a * 5;
+        let i = (self.angle[x][y] as i32 + turn * a / 2).rem_euclid(32) as usize;
+        (SINE[(i + 8) % 32] * r / 256 / 2, SINE[i] * r / 256)
+    }
+}
+
+impl Iterator for PixelSwirlIterator {
+    type Item = Grid;
+
+    fn next(&mut self) -> Option<Grid> {
+        // Swirl in: 60 frames, sit: 30, swirl out: 60, dark: 6
+        let t = self.frame as i32;
+        self.frame += 1;
+        if t < 60 {
+            return Some(moved(&rings_picture(), |x, y| {
+                self.spiral(x, y, (self.t.arrive[x][y] as i32 - t).max(0), 1)
+            }));
+        }
+        let t = t - 60;
+        if t < 30 {
+            return Some(rings_picture());
+        }
+        let t = t - 30;
+        if t < 60 {
+            return Some(moved(&rings_picture(), |x, y| {
+                self.spiral(x, y, (t - self.t.leave[x][y] as i32).max(0), -1)
+            }));
+        }
+        if t < 66 {
+            return Some(Grid::default());
+        }
+        None
+    }
+}
+
+/// Code wall (Digital rain + Pixel rain): code rain falls, and each drop stops where it lands to
+/// build a wall of code. Then the wall melts back into falling code.
+pub struct CodeWallIterator {
+    frame: u32,
+    rng: Rng,
+    t: Timings,
+    /// x, y in 1/256 LEDs, speed in 1/256 LEDs per frame; y < 0 means the slot is free
+    drops: [(u8, i32, i32); 64],
+    trail: Grid,
+    picture: Grid,
+}
+
+impl CodeWallIterator {
+    pub fn new(seed: u8) -> Self {
+        let mut rng = Rng::new(seed);
+        let t = Timings::new(
+            &mut rng,
+            |_, _, r| 30 + r.below(56),
+            |_, y, r| (HEIGHT - 1 - y) as u32 + r.below(16),
+        );
+        // Random bright and dim LEDs, leaving 4 rows free at the top and bottom
+        let mut picture = Grid::default();
+        for col in picture.0.iter_mut() {
+            for led in col[4..HEIGHT - 4].iter_mut() {
+                if rng.below(10) < 6 {
+                    *led = 90 + rng.below(160) as u8;
+                }
+            }
+        }
+        Self {
+            frame: 0,
+            rng,
+            t,
+            drops: [(0, -1, 0); 64],
+            trail: Grid::default(),
+            picture,
+        }
+    }
+
+    fn background_rain(&mut self, spawn: u32) {
+        for _ in 0..spawn {
+            if self.rng.below(10) < 7 {
+                let x = self.rng.below(WIDTH as u32) as u8;
+                let speed = 128 + self.rng.below(205) as i32;
+                if let Some(slot) = self.drops.iter_mut().find(|d| d.1 < 0) {
+                    *slot = (x, 0, speed);
+                }
+            }
+        }
+        for drop in self.drops.iter_mut() {
+            if drop.1 < 0 {
+                continue;
+            }
+            drop.1 += drop.2;
+            let y = (drop.1 >> 8) as usize;
+            if y >= HEIGHT {
+                drop.1 = -1;
+                continue;
+            }
+            self.trail.0[drop.0 as usize][y] = 200;
+        }
+    }
+}
+
+impl Iterator for CodeWallIterator {
+    type Item = Grid;
+
+    fn next(&mut self) -> Option<Grid> {
+        // Build: 96 frames, glow: 20, melt: 64, fade: 8, dark: 6
+        let t = self.frame as i32;
+        self.frame += 1;
+        if t < 96 {
+            self.trail = scaled(&self.trail, 184, 256);
+            self.background_rain(if t < 70 { 2 } else { 0 });
+            let mut lit = Grid::default();
+            for x in 0..WIDTH {
+                for y in 0..HEIGHT {
+                    let v = self.picture.0[x][y];
+                    if v == 0 {
+                        continue;
+                    }
+                    let a = self.t.arrive[x][y] as i32 - t;
+                    if a <= 0 {
+                        lit.0[x][y] = v;
+                    } else {
+                        // This LED's drop, one LED per frame, reaching it in `a` frames
+                        let head = y as i32 - a;
+                        if head >= 0 {
+                            self.trail.0[x][head as usize] = 255;
+                        }
+                    }
+                }
+            }
+            let mut grid = scaled(&self.trail, 4, 5);
+            max_into(&mut grid, &lit);
+            return Some(grid);
+        }
+        let t = t - 96;
+        if t < 20 {
+            // 0.9 + 0.1 * sin, in 1/255
+            const GLOW: [u8; 20] = [
+                230, 240, 250, 255, 253, 245, 233, 221, 210, 205, 205, 212, 223, 235, 247, 254,
+                250, 242, 235, 230,
+            ];
+            self.trail = scaled(&self.trail, 184, 256);
+            let mut grid = scaled(&self.trail, 4, 5);
+            max_into(
+                &mut grid,
+                &scaled(&self.picture, GLOW[t as usize] as u32, 255),
+            );
+            return Some(grid);
+        }
+        let t = t - 20;
+        if t < 64 {
+            self.trail = scaled(&self.trail, 150, 256);
+            let mut grid = Grid::default();
+            for x in 0..WIDTH {
+                for y in 0..HEIGHT {
+                    let v = self.picture.0[x][y];
+                    if v == 0 {
+                        continue;
+                    }
+                    let a = t - self.t.leave[x][y] as i32;
+                    if a < 0 {
+                        grid.0[x][y] = v;
+                    } else {
+                        // Falls faster and faster, leaving a trail
+                        let gy = (y as i32 * 256 + a * 160 + a * a * 10) >> 8;
+                        if gy < HEIGHT as i32 {
+                            self.trail.0[x][gy as usize] = 255;
+                        }
+                    }
+                }
+            }
+            max_into(&mut grid, &scaled(&self.trail, 4, 5));
+            return Some(grid);
+        }
+        let t = t - 64;
+        if t < 8 {
+            self.trail = scaled(&self.trail, 184, 256);
+            return Some(scaled(&self.trail, 4, 5));
+        }
+        if t < 14 {
+            return Some(Grid::default());
+        }
+        None
+    }
+}
+
+/// Warp rings (Warp speed + Pixel rain): pixels rush in from deep space with streaks and land as
+/// diamond rings. Then the rings and the stars rush out past you and the panel flashes white.
+pub struct WarpRingsIterator {
+    frame: u32,
+    rng: Rng,
+    t: Timings,
+    angle: [[u8; HEIGHT]; WIDTH],
+    /// Direction (index into SINE) and distance from the middle in 1/256 LEDs; 0 means a free slot
+    stars: [(u8, u32); 64],
+    trail: Grid,
+}
+
+impl WarpRingsIterator {
+    pub fn new(seed: u8) -> Self {
+        let mut rng = Rng::new(seed);
+        let t = Timings::new(&mut rng, |_, _, r| 16 + r.below(42), |_, _, r| r.below(8));
+        let angle = directions(&mut rng);
+        Self {
+            frame: 0,
+            rng,
+            t,
+            angle,
+            stars: [(0, 0); 64],
+            trail: Grid::default(),
+        }
+    }
+
+    /// The stars of Warp speed, `t` frames in
+    fn stars(&mut self, t: u32) {
+        let speed = 200 + t * 1200 / 60;
+        for _ in 0..1 + t / 15 {
+            let direction = self.rng.below(32) as u8;
+            if let Some(slot) = self.stars.iter_mut().find(|s| s.1 == 0) {
+                *slot = (direction, 128);
+            }
+        }
+        for star in self.stars.iter_mut() {
+            if star.1 == 0 {
+                continue;
+            }
+            star.1 += star.1 * speed * 22 / 100_000 + speed * 512 / 10_000;
+            let r = star.1 as i32;
+            let sin = SINE[star.0 as usize];
+            let cos = SINE[(star.0 as usize + 8) % 32];
+            let x = (4 * 256 + 128 + cos * r * 3 / 10 / 256) >> 8;
+            let y = (16 * 256 + 128 + 128 + sin * r / 256) >> 8;
+            if (0..WIDTH as i32).contains(&x) && (0..HEIGHT as i32).contains(&y) {
+                let level = (77 + r * 255 / (14 * 256)).min(255) as u8;
+                let led = &mut self.trail.0[x as usize][y as usize];
+                *led = (*led).max(level);
+            } else {
+                star.1 = 0;
+            }
+        }
+    }
+}
+
+impl Iterator for WarpRingsIterator {
+    type Item = Grid;
+
+    fn next(&mut self) -> Option<Grid> {
+        // Rush in: 64 frames, sit: 26, rush out: 50, flash up: 5, flash down: 18, dark: 6
+        let t = self.frame as i32;
+        self.frame += 1;
+        if t < 64 {
+            self.trail = scaled(&self.trail, 150, 256);
+            let tm = &self.t;
+            let angle = &self.angle;
+            let now = moved(&rings_picture(), |x, y| {
+                let a = (tm.arrive[x][y] as i32 - t).max(0);
+                // Comes in along a straight line, slowing down as it lands
+                let r = a * a * 6;
+                let i = angle[x][y] as usize;
+                (SINE[(i + 8) % 32] * r * 4 / 10 / 256, SINE[i] * r / 256)
+            });
+            max_into(&mut self.trail, &now);
+            return Some(self.trail.clone());
+        }
+        let t = t - 64;
+        if t < 26 {
+            self.trail = scaled(&self.trail, 150, 256);
+            let mut grid = self.trail.clone();
+            max_into(&mut grid, &rings_picture());
+            return Some(grid);
+        }
+        let t = t - 26;
+        if t < 50 {
+            self.trail = scaled(&self.trail, if t < 36 { 150 } else { 200 }, 256);
+            self.stars(t as u32);
+            let tm = &self.t;
+            // The rings zoom past: every LED moves away from the middle, faster and faster
+            let now = moved(&rings_picture(), |x, y| {
+                let a = (t - tm.leave[x][y] as i32).max(0);
+                let grow = a * a * 3 / 2;
+                let dx = x as i32 * 256 - 4 * 256;
+                let dy = y as i32 * 256 + 128 - 16 * 256 - 256;
+                (dx * grow / 256, dy * grow / 256)
+            });
+            max_into(&mut self.trail, &now);
+            return Some(self.trail.clone());
+        }
+        let t = t - 50;
+        if t < 5 {
+            return Some(filled(((t + 1) * 255 / 5) as u8));
+        }
+        let t = t - 5;
+        if t < 18 {
+            return Some(filled((255 - (t + 1) * 255 / 18) as u8));
+        }
+        if t < 24 {
+            return Some(Grid::default());
+        }
+        None
+    }
+}
+
+/// Rabbit hole rain (Rabbit hole + Pixel rain): the rabbit floats up into place at the top, pixel
+/// by pixel, then hops down the panel and dives into the hole, as in Rabbit hole.
+pub struct RabbitHoleRainIterator {
+    frame: u32,
+    t: Timings,
+}
+
+impl RabbitHoleRainIterator {
+    pub fn new(seed: u8) -> Self {
+        let mut rng = Rng::new(seed);
+        let t = Timings::new(
+            &mut rng,
+            |_, y, r| 20 + y as u32 * 2 + r.below(9),
+            |_, _, _| 0,
+        );
+        Self { frame: 0, t }
+    }
+
+    fn picture() -> Grid {
+        let mut grid = Grid::default();
+        stamp_rabbit(&mut grid, 1, HOPS[1], 230, HEIGHT as i32);
+        grid
+    }
+}
+
+impl Iterator for RabbitHoleRainIterator {
+    type Item = Grid;
+
+    fn next(&mut self) -> Option<Grid> {
+        // Float up: 44 frames, the hole opens: 10, then Rabbit hole from its first landing
+        let t = self.frame as i32;
+        self.frame += 1;
+        if t < 44 {
+            let tm = &self.t;
+            return Some(moved(&Self::picture(), |x, y| {
+                let a = (tm.arrive[x][y] as i32 - t).max(0);
+                (tm.drift[x][y] as i32 * a * 5, a * a * 35 / 4)
+            }));
+        }
+        let t = t - 44;
+        if t < 10 {
+            let mut grid = RabbitHoleIterator::hole(t as u32);
+            max_into(&mut grid, &Self::picture());
+            return Some(grid);
+        }
+        // Frame 22 of Rabbit hole is the end of the first hop, with the rabbit at HOPS[1]
+        RabbitHoleIterator::draw(22 + (t - 10) as u32)
+    }
+}
